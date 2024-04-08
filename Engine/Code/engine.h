@@ -80,7 +80,7 @@ struct App
 
     // program indices
     u32 texturedGeometryProgramIdx;
-    
+
     // texture indices
     u32 diceTexIdx;
     u32 whiteTexIdx;
