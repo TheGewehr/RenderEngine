@@ -1,25 +1,6 @@
 ﻿  engine.cpp
-C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\engine.cpp(60,23): warning C4018: '<': signed/unsigned mismatch
-  platform.cpp
-C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\platform.cpp(42,36): warning C4244: '=': conversion from 'double' to 'T', possible loss of data
-          with
-          [
-              T=float
-          ]
-C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\platform.cpp(43,36): warning C4244: '=': conversion from 'double' to 'T', possible loss of data
-          with
-          [
-              T=float
-          ]
-C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\platform.cpp(44,29): warning C4244: '=': conversion from 'double' to 'T', possible loss of data
-          with
-          [
-              T=float
-          ]
-C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\platform.cpp(45,29): warning C4244: '=': conversion from 'double' to 'T', possible loss of data
-          with
-          [
-              T=float
-          ]
-  Generating Code...
+C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\platform.h(107,1): warning C4005: 'PI': macro redefinition
+C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\engine.cpp(7,1): message : see previous definition of 'PI'
+C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\engine.cpp(61,23): warning C4018: '<': signed/unsigned mismatch
+C:\Users\Usuario\Desktop\RenderEngine\Engine\Code\engine.cpp(461,12): warning C4101: 'sphere': unreferenced local variable
   Engine.vcxproj -> C:\Users\Usuario\Desktop\RenderEngine\Engine\x64\Debug\Engine.exe

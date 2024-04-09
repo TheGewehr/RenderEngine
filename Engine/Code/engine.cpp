@@ -4,6 +4,7 @@
 // input platform events (e.g to move the camera or react to certain shortcuts), writing some
 // graphics related GUI options, and so on.
 //
+#define PI 3.1416f
 
 #include "engine.h"
 #include <imgui.h>
@@ -451,6 +452,63 @@ void ProcessAssimpNode(const aiScene* scene, aiNode* node, Mesh* myMesh, u32 bas
     }
 }
 
+void CreateSphere(App* app)
+{
+    const int H = 32;
+    const int V = 16;
+    struct Vertex { vec3 pos; vec3 norm; };
+
+    Vertex sphere[H][V + 1];
+    for (int h = 0; h < H; ++h)
+    {
+        for (int v = 0; v < V; ++v)
+        {
+            float nh = float(h) / H;
+            float nv = float(v) / V - 0.5f;
+            float angleh = 2 * PI * nh;
+            float anglev = -PI * nv;
+            sphere[h][v].pos.x = sinf(angleh) * cosf(anglev);
+            sphere[h][v].pos.y = -sinf(anglev);
+            sphere[h][v].pos.z = cosf(angleh) * cosf(anglev);
+            sphere[h][v].norm = sphere[h][v].pos;
+        }
+    }
+
+    unsigned int sphereIndices[H][V][6];
+
+    for (unsigned int h = 0; h < H; ++h)
+    {
+        for (unsigned int v = 0; v < V; ++v)
+        {
+            sphereIndices[H][V][0] = (h+0) * (V+1) + v;
+            sphereIndices[H][V][1] = ((h+1)%H) * (V+1) + v;
+            sphereIndices[H][V][2] = ((h+1)%H) * (V+1) + v + 1;
+            sphereIndices[H][V][3] = (h+0) * (V+1) + v;
+            sphereIndices[H][V][4] = ((h+1)%H) * (V+1) + v + 1;
+            sphereIndices[H][V][5] = (h + 0) * (V + 1) + v + 1;
+        }
+    }
+    
+    
+    
+    Material SphereMaterial;
+    
+    SphereMaterial.albedo = vec3(1.f, 1.f, 1.f);
+    SphereMaterial.albedoTextureIdx = (u32)1;
+
+    app->materials.push_back(SphereMaterial);
+
+    Mesh SphereMesh;
+    
+
+    Model SphereModel;
+
+    SphereModel.materialIdx;
+    SphereModel.meshIdx;
+
+    app->models.push_back(SphereModel);
+}
+
 u32 LoadModel(App* app, const char* filename)
 {
     const aiScene* scene = aiImportFile(filename,
@@ -575,12 +633,14 @@ void Init(App* app)
     LoadProgramAttributes(texturedMeshProgram);
     
     // Texture initialization
-    app->diceTexIdx = LoadTexture2D(app, "dice.png");
+    //app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
     app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
-    app->modelIdx = LoadModel(app, "Patrick/Patrick.obj");
+    
+    //LoadModel(app, "Models/Sphere/sphere.obj");
+    LoadModel(app, "Models/Patrick/Patrick.obj");
 
     glDebugMessageCallback(OnGlError, app);
 }
@@ -630,27 +690,30 @@ void Render(App* app)
     break;
     case Mode_AlbedoPatrick:
     {
-        Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
-        glUseProgram(texturedMeshProgram.handle);
-        
-        Model& model = app->models[app->modelIdx];
-        Mesh& mesh = app->meshes[model.meshIdx];
-
-        for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+        for (int j = 0; j < app->models.size(); j++)
         {
-            GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
-            glBindVertexArray(vao);
+            Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+            glUseProgram(texturedMeshProgram.handle);
 
-            u32 submeshMaterialIdx = model.materialIdx[i];
-            Material& submeshMaterial = app->materials[submeshMaterialIdx];
+            Model& model = app->models[j];
+            Mesh& mesh = app->meshes[model.meshIdx];
 
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-            glUniform1i(app->programUniformTexture, 0);//
+            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+            {
+                GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+                glBindVertexArray(vao);
 
-            Submesh& submesh = mesh.submeshes[i];
-            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*) (u64)submesh.indexOffset);
-        }
+                u32 submeshMaterialIdx = model.materialIdx[i];
+                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                glUniform1i(app->programUniformTexture, 0);//
+
+                Submesh& submesh = mesh.submeshes[i];
+                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            }
+        }        
     }
     break;
 
