@@ -13,6 +13,7 @@ typedef glm::vec4  vec4;
 typedef glm::ivec2 ivec2;
 typedef glm::ivec3 ivec3;
 typedef glm::ivec4 ivec4;
+typedef glm::mat4  mat4;
 
 ///////////////////
 // Quad with texture structs
@@ -130,6 +131,59 @@ struct Program
     VertexShaderLayout vertexInputLayout;
 };
 
+enum Camera_Movement {
+    CAMERA_FORWARD,
+    CAMERA_BACKWARD,
+    CAMERA_LEFT,
+    CAMERA_RIGHT
+};
+
+class Camera
+{
+private:
+
+    // Default camera values
+    const float YAW = -90.0f;
+    const float PITCH = 0.0f;
+    const float SPEED = 2.5f;
+    const float SENSITIVITY = 0.1f;
+    const float ZOOM = 45.0f;
+
+public:
+    Camera();
+    Camera(glm::vec3 position, glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = -90.0f, float pitch = 0.0f);
+
+    vec3 position;
+    vec3 front;
+    vec3 up;
+    vec3 right;
+    vec3 worldUp;
+
+    float yaw = -90.0f;
+    float pitch = 0.0f;
+
+    float movementSpeed = 0.5f;
+    float mouseSensitivity = 0.5f;
+    float zoom = 0.5f;
+
+    mat4 GetViewMatrix();
+    void ProcessKeyboard(Camera_Movement direction, float deltaTime);
+    void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
+    void ProcessMouseScroll(float yoffset);
+
+    void UpdateCameraVectors();
+};
+
+struct Object
+{
+    mat4 worldMatrix;
+    mat4 worldViewProjection;
+    vec3 position;
+    u32 modelIndex;
+    //u32 localParamsOffset;
+    //u32 localParamsSize;
+};
+
 enum Mode
 {
     Mode_TexturedQuad,
@@ -162,7 +216,8 @@ struct App
     u32 blackTexIdx;
     u32 normalTexIdx;
     u32 magentaTexIdx;
-    u32 modelIdx;
+    //u32 modelIdx;
+
 
     // Mode
     Mode mode;
@@ -178,11 +233,18 @@ struct App
     // VAO object to link our screen filling quad with our textured quad shader
     GLuint vao;
 
+    // Camera
+    Camera camera = Camera(vec3(0.25f, 1.25f, 6.75f));
+
     std::vector<Texture> textures;
     std::vector<Material>  materials;
     std::vector<Mesh>  meshes;
     std::vector<Model>  models;
     std::vector<Program>  programs;
+
+    std::vector<Object> objects;
+
+    
 };
 
 void Init(App* app);
@@ -192,3 +254,8 @@ void Gui(App* app);
 void Update(App* app);
 
 void Render(App* app);
+
+
+
+
+

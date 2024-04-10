@@ -592,6 +592,30 @@ u32 LoadModel(App* app, const char* filename)
     return modelIdx;
 }
 
+void HandleInput(App* app)
+{
+    if (app->input.keys[K_W] == BUTTON_PRESSED) {
+        app->camera.ProcessKeyboard(Camera_Movement::CAMERA_FORWARD, app->deltaTime);
+    }
+    if (app->input.keys[K_A] == BUTTON_PRESSED) {
+        app->camera.ProcessKeyboard(Camera_Movement::CAMERA_LEFT, app->deltaTime);
+    }
+    if (app->input.keys[K_S] == BUTTON_PRESSED) {
+        app->camera.ProcessKeyboard(Camera_Movement::CAMERA_BACKWARD, app->deltaTime);
+    }
+    if (app->input.keys[K_D] == BUTTON_PRESSED) {
+        app->camera.ProcessKeyboard(Camera_Movement::CAMERA_RIGHT, app->deltaTime);
+    }
+
+    if (app->input.mouseButtons[LEFT] == BUTTON_PRESSED || app->input.mouseButtons[RIGHT] == BUTTON_PRESSED)
+    {
+        app->camera.ProcessMouseMovement(app->input.mouseDelta.x, -app->input.mouseDelta.y);
+    }
+
+    //app->camera.ProcessMouseScroll(app->input.mouseDelta);
+}
+
+
 
 void Init(App* app)
 {
@@ -604,6 +628,11 @@ void Init(App* app)
 
     //app->mode = Mode_TexturedQuad;
     app->mode = Mode_AlbedoPatrick;
+
+    // Camera
+    app->camera.yaw = -90.0f;
+    app->camera.pitch = -10.0f;
+    app->camera.UpdateCameraVectors();
 
     // Geometry
     glGenBuffers(1, &app->embeddedVertices);
@@ -640,7 +669,12 @@ void Init(App* app)
     app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
     
     //LoadModel(app, "Models/Sphere/sphere.obj");
-    LoadModel(app, "Models/Patrick/Patrick.obj");
+    
+    //Objects
+    Object object;
+    object.position = vec3(0.0f, 0.0f, 0.0f);
+    object.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
+    app->objects.push_back(object);
 
     glDebugMessageCallback(OnGlError, app);
 }
@@ -655,6 +689,8 @@ void Gui(App* app)
 void Update(App* app)
 {
     // You can handle app->input keyboard/mouse here
+    HandleInput(app);
+
 }
 
 void Render(App* app)
@@ -722,3 +758,83 @@ void Render(App* app)
 
     glDebugMessageCallback(OnGlError, app);
 }
+
+
+// Camera Functions
+
+Camera::Camera()
+{
+    position = vec3(0.0f, 0.0f, 0.0f);
+    front = vec3(0.0f, -1.0f, 0.0f);
+    right = vec3(1.0f, 0.0f, 0.0f);
+    up = worldUp = vec3(0.0f, 1.0f, 0.0f);
+    movementSpeed = SPEED;
+    mouseSensitivity = SENSITIVITY;
+    zoom = ZOOM;
+}
+
+Camera::Camera(glm::vec3 _position, glm::vec3 _up, float _yaw, float _pitch) : front(glm::vec3(0.0f, 0.0f, -1.0f)), movementSpeed(SPEED), mouseSensitivity(SENSITIVITY), zoom(ZOOM)
+{
+    position = _position;
+    worldUp = _up;
+    yaw = _yaw;
+    pitch = _pitch;
+    UpdateCameraVectors();
+}
+
+mat4 Camera::GetViewMatrix()
+{
+    return glm::lookAt(position, position + front, up);
+}
+
+void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
+{
+    float velocity = movementSpeed * deltaTime;
+    if (direction == CAMERA_FORWARD)
+        position += front * velocity;
+    if (direction == CAMERA_BACKWARD)
+        position -= front * velocity;
+    if (direction == CAMERA_LEFT)
+        position -= right * velocity;
+    if (direction == CAMERA_RIGHT)
+        position += right * velocity;
+}
+
+void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
+{
+    xoffset *= mouseSensitivity;
+    yoffset *= mouseSensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+    
+    if (constrainPitch)
+    {
+        if (pitch > 89.0f)
+            pitch = 89.0f;
+        if (pitch < -89.0f)
+            pitch = -89.0f;
+    }
+
+    UpdateCameraVectors();
+}
+
+void Camera::ProcessMouseScroll(float yoffset)
+{
+    zoom -= (float)yoffset;
+    if (zoom < 1.0f) { zoom = 1.0f; }
+    if (zoom > 45.0f) { zoom = 45.0f; }
+}
+
+void Camera::UpdateCameraVectors()
+{
+    // calculate the new Front vector
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front = glm::normalize(front);
+    // also re-calculate the Right and Up vector
+    right = glm::normalize(glm::cross(front, worldUp));  
+    up = glm::normalize(glm::cross(right, front));
+}
+

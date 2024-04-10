@@ -398,3 +398,4 @@ FodyWeavers.xsd
 *.sln.iml
 Engine/.vs/Engine/v17/Browse.VC.db
 Engine/.vs/Engine/v17/.suo
+*.pdb
