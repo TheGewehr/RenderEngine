@@ -13,6 +13,7 @@
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <iostream>
 
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
@@ -52,6 +53,24 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     case GL_DEBUG_SEVERITY_NOTIFICATION:    ELOG(" - severity: GL_DEBUG_SEVERITY_NOTIFICATION"); break; // Anything that isn't an error
     }
 };
+
+// Function to display glm::vec3
+void logVec3(const glm::vec3& v) {
+    std::cout << "glm::vec3: (" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;
+}
+
+// Function to display glm::mat4
+void logMat4(const glm::mat4& m) {
+    std::cout << "glm::mat4:" << std::endl;
+    for (int i = 0; i < 4; i++) {
+        std::cout << "(";
+        for (int j = 0; j < 4; j++) {
+            std::cout << m[i][j];
+            if (j < 3) std::cout << ", ";
+        }
+        std::cout << ")" << std::endl;
+    }
+}
 
 u8 LoadProgramAttributes(Program& program)
 {
@@ -452,7 +471,7 @@ void ProcessAssimpNode(const aiScene* scene, aiNode* node, Mesh* myMesh, u32 bas
     }
 }
 
-void CreateSphere(App* app)
+void CreateSphere(App* app) 
 {
     const int H = 32;
     const int V = 16;
@@ -726,12 +745,12 @@ void Render(App* app)
     break;
     case Mode_AlbedoPatrick:
     {
-        for (int j = 0; j < app->models.size(); j++)
+        for (int j = 0; j < app->objects.size(); j++)
         {
             Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
             glUseProgram(texturedMeshProgram.handle);
 
-            Model& model = app->models[j];
+            Model& model = app->models[app->objects[j].modelIndex];
             Mesh& mesh = app->meshes[model.meshIdx];
 
             for (u32 i = 0; i < mesh.submeshes.size(); ++i)
