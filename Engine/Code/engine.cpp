@@ -5,6 +5,7 @@
 // graphics related GUI options, and so on.
 //
 #define PI 3.1416f
+#define BINDING(b) b
 
 #include "engine.h"
 #include <imgui.h>
@@ -70,6 +71,17 @@ void logMat4(const glm::mat4& m) {
         }
         std::cout << ")" << std::endl;
     }
+}
+
+vec3 rotate(const vec3& vector, float degrees, const vec3& axis)
+{
+    float radians = glm::radians(degrees);
+
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), radians, axis);
+
+    glm::vec4 rotatedVector = rotationMatrix * glm::vec4(vector, 1.0f);
+
+    return glm::vec3(rotatedVector);
 }
 
 u8 LoadProgramAttributes(Program& program)
@@ -587,6 +599,10 @@ u32 LoadModel(App* app, const char* filename)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
 
+    glGenBuffers(1, &mesh.uniformBufferHandle);
+    glBindBuffer(GL_UNIFORM_BUFFER, mesh.uniformBufferHandle);
+    glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
+
     u32 indicesOffset = 0;
     u32 verticesOffset = 0;
 
@@ -607,32 +623,11 @@ u32 LoadModel(App* app, const char* filename)
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     return modelIdx;
 }
 
-void HandleInput(App* app)
-{
-    if (app->input.keys[K_W] == BUTTON_PRESSED) {
-        app->camera.ProcessKeyboard(Camera_Movement::CAMERA_FORWARD, app->deltaTime);
-    }
-    if (app->input.keys[K_A] == BUTTON_PRESSED) {
-        app->camera.ProcessKeyboard(Camera_Movement::CAMERA_LEFT, app->deltaTime);
-    }
-    if (app->input.keys[K_S] == BUTTON_PRESSED) {
-        app->camera.ProcessKeyboard(Camera_Movement::CAMERA_BACKWARD, app->deltaTime);
-    }
-    if (app->input.keys[K_D] == BUTTON_PRESSED) {
-        app->camera.ProcessKeyboard(Camera_Movement::CAMERA_RIGHT, app->deltaTime);
-    }
-
-    if (app->input.mouseButtons[LEFT] == BUTTON_PRESSED || app->input.mouseButtons[RIGHT] == BUTTON_PRESSED)
-    {
-        app->camera.ProcessMouseMovement(app->input.mouseDelta.x, -app->input.mouseDelta.y);
-    }
-
-    //app->camera.ProcessMouseScroll(app->input.mouseDelta);
-}
 
 
 
@@ -649,9 +644,11 @@ void Init(App* app)
     app->mode = Mode_AlbedoPatrick;
 
     // Camera
-    app->camera.yaw = -90.0f;
-    app->camera.pitch = -10.0f;
-    app->camera.UpdateCameraVectors();
+    
+    app->camera.SetValues();
+
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
 
     // Geometry
     glGenBuffers(1, &app->embeddedVertices);
@@ -692,9 +689,11 @@ void Init(App* app)
     //Objects
     Object object;
     object.position = vec3(0.0f, 0.0f, 0.0f);
+    object.worldMatrix = identityMatrix;
     object.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
     app->objects.push_back(object);
 
+    glEnable(GL_DEPTH_TEST);
     glDebugMessageCallback(OnGlError, app);
 }
 
@@ -708,7 +707,48 @@ void Gui(App* app)
 void Update(App* app)
 {
     // You can handle app->input keyboard/mouse here
-    HandleInput(app);
+    app->camera.UpdateCamera(app);
+
+    for (u64 i = 0; i < app->programs.size(); i++)
+    {
+        Program& program = app->programs[i];
+        u64 currentTimestamp = GetFileLastWriteTimestamp(program.filepath.c_str());
+        if (currentTimestamp > program.lastWriteTimestamp)
+        {
+            glDeleteProgram(program.handle);
+            String programSource = ReadTextFile(program.filepath.c_str());
+            const char* programName = program.programName.c_str();
+            program.handle = CreateProgramFromSource(programSource, programName);
+            program.lastWriteTimestamp = currentTimestamp;
+        }
+    }
+
+    for (int i = 0; i < app->objects.size(); i++)
+    {
+        Object& Object = app->objects[i];
+
+        //update transform
+        float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+        mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
+        mat4 view = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
+
+        //update transform and view matrices
+        //sceneObject.worldMatrix = IdentityMatrix; --> only at the start;
+        Object.worldViewProjection = projectionMatrix * view * Object.worldMatrix;
+
+        //opengl stuff
+        glBindBuffer(GL_UNIFORM_BUFFER, app->meshes[app->models[Object.modelIndex].meshIdx].uniformBufferHandle);
+        u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+        u32 bufferHead = 0;
+
+        memcpy(bufferData + bufferHead, glm::value_ptr(Object.worldMatrix), sizeof(mat4));
+        bufferHead += sizeof(mat4);
+
+        memcpy(bufferData + bufferHead, glm::value_ptr(Object.worldViewProjection), sizeof(mat4));
+        bufferHead += sizeof(mat4);
+
+        glUnmapBuffer(GL_UNIFORM_BUFFER);
+    }
 
 }
 
@@ -745,6 +785,17 @@ void Render(App* app)
     break;
     case Mode_AlbedoPatrick:
     {
+
+        // - clear the framebuffer
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // - set the viewport
+        glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+        // - set the blending state
+        glEnable(GL_BLEND);
+
         for (int j = 0; j < app->objects.size(); j++)
         {
             Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
@@ -753,8 +804,13 @@ void Render(App* app)
             Model& model = app->models[app->objects[j].modelIndex];
             Mesh& mesh = app->meshes[model.meshIdx];
 
+            u32 blockOffset = 0;
+            u32 blockSize = sizeof(mat4) * 2;
+
             for (u32 i = 0; i < mesh.submeshes.size(); ++i)
             {
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), mesh.uniformBufferHandle, blockOffset, blockSize);
+
                 GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
                 glBindVertexArray(vao);
 
@@ -778,82 +834,142 @@ void Render(App* app)
     glDebugMessageCallback(OnGlError, app);
 }
 
-
-// Camera Functions
-
-Camera::Camera()
+void Camera::SetValues()
 {
-    position = vec3(0.0f, 0.0f, 0.0f);
-    front = vec3(0.0f, -1.0f, 0.0f);
-    right = vec3(1.0f, 0.0f, 0.0f);
-    up = worldUp = vec3(0.0f, 1.0f, 0.0f);
-    movementSpeed = SPEED;
-    mouseSensitivity = SENSITIVITY;
-    zoom = ZOOM;
+
+    X = vec3(1.0f, 0.0f, 0.0f);
+    Y = vec3(0.0f, 1.0f, 0.0f);
+    Z = vec3(0.0f, 0.0f, 1.0f);
+
+    sensitivity = 0.5f;
+    Position = vec3(5, 5.0, 5.0f);
+    currentReference = vec3(0.0f, 0.0f, 0.0f);
+    speed = 0.01f;
+    zNear = 0.1f;
+    zFar = 1000.f;
+    fov = 60.f;;
+
+    CalculateViewMatrix();
 }
 
-Camera::Camera(glm::vec3 _position, glm::vec3 _up, float _yaw, float _pitch) : front(glm::vec3(0.0f, 0.0f, -1.0f)), movementSpeed(SPEED), mouseSensitivity(SENSITIVITY), zoom(ZOOM)
+void Camera::CalculateViewMatrix()
 {
-    position = _position;
-    worldUp = _up;
-    yaw = _yaw;
-    pitch = _pitch;
-    UpdateCameraVectors();
-}
-
-mat4 Camera::GetViewMatrix()
-{
-    return glm::lookAt(position, position + front, up);
-}
-
-void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
-{
-    float velocity = movementSpeed * deltaTime;
-    if (direction == CAMERA_FORWARD)
-        position += front * velocity;
-    if (direction == CAMERA_BACKWARD)
-        position -= front * velocity;
-    if (direction == CAMERA_LEFT)
-        position -= right * velocity;
-    if (direction == CAMERA_RIGHT)
-        position += right * velocity;
-}
-
-void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
-{
-    xoffset *= mouseSensitivity;
-    yoffset *= mouseSensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-    
-    if (constrainPitch)
     {
-        if (pitch > 89.0f)
-            pitch = 89.0f;
-        if (pitch < -89.0f)
-            pitch = -89.0f;
+        ViewMatrix = mat4(X.x, Y.x, Z.x, 0.0f, X.y, Y.y, Z.y, 0.0f, X.z, Y.z, Z.z, 0.0f, -dot(X, Position), -dot(Y, Position), -dot(Z, Position), 1.0f);
+        ViewMatrixInverse = inverse(ViewMatrix);
+    }
+}
+
+void Camera::UpdateCamera(App* app)
+{
+
+    vec3 newPos(0, 0, 0);
+    float spd = speed * app->deltaTime * 1000.f;
+
+    // keyboard movement
+
+    if (app->input.keys[Key::K_Q])
+    {
+        newPos.y -= spd;
     }
 
-    UpdateCameraVectors();
-}
+    if (app->input.keys[Key::K_E])
+    {
+        newPos.y += spd;
+    }
 
-void Camera::ProcessMouseScroll(float yoffset)
-{
-    zoom -= (float)yoffset;
-    if (zoom < 1.0f) { zoom = 1.0f; }
-    if (zoom > 45.0f) { zoom = 45.0f; }
-}
+    if (app->input.keys[Key::K_W])
+    {
+        newPos -= Z * spd;
+    }
 
-void Camera::UpdateCameraVectors()
-{
-    // calculate the new Front vector
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front = glm::normalize(front);
-    // also re-calculate the Right and Up vector
-    right = glm::normalize(glm::cross(front, worldUp));  
-    up = glm::normalize(glm::cross(right, front));
-}
+    if (app->input.keys[Key::K_S])
+    {
+        newPos += Z * spd;
+    }
 
+    if (app->input.keys[Key::K_A])
+    {
+        newPos -= X * spd;
+    }
+
+    if (app->input.keys[Key::K_D])
+    {
+        newPos += X * spd;
+    }
+
+    Position += newPos;
+    currentReference += newPos;
+
+    //mouse movement
+
+    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && app->input.mouseButtons[MouseButton::RIGHT])
+    {
+        float dx = app->input.mouseDelta.x;
+        float dy = app->input.mouseDelta.y;
+
+        Position -= currentReference;
+
+        if (dx != 0)
+        {
+            float DeltaX = (float)dx * sensitivity;
+
+            X = rotate(X, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+            Y = rotate(Y, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+            Z = rotate(Z, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+        }
+
+        if (dy != 0)
+        {
+            float DeltaY = (float)dy * sensitivity;
+
+            Y = rotate(Y, DeltaY, X);
+            Z = rotate(Z, DeltaY, X);
+
+            if (Y.y < 0.0f)
+            {
+                Z = vec3(0.0f, Z.y > 0.0f ? 1.0f : -1.0f, 0.0f);
+                Y = cross(Z, X);
+            }
+
+        }
+        Position = currentReference + Z * length(Position);
+
+    }
+
+
+    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && app->input.mouseButtons[MouseButton::LEFT])
+    {
+        float dx = app->input.mouseDelta.x;
+        float dy = app->input.mouseDelta.y;
+
+        if (dx != 0)
+        {
+            float DeltaX = (float)dx * sensitivity * 0.5f;
+
+            X = rotate(X, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+            Y = rotate(Y, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+            Z = rotate(Z, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+        }
+
+        if (dy != 0)
+        {
+            float DeltaY = (float)dy * sensitivity * 0.5f;
+
+            Y = rotate(Y, DeltaY, X);
+            Z = rotate(Z, DeltaY, X);
+
+            if (Y.y < 0.0f)
+            {
+                Z = vec3(0.0f, Z.y > 0.0f ? 1.0f : -1.0f, 0.0f);
+                Y = cross(Z, X);
+            }
+        }
+        currentReference = Position - Z * length(Position);
+    }
+
+    CalculateViewMatrix();
+
+
+
+}

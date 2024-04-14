@@ -5,25 +5,31 @@
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aNormal;
-layout(location = 2) in vec3 aTexCoord;
+layout(binding = 1, std140) uniform localParams
+{
+	mat4 uWorldMatrix;
+	mat4 uWorldViewProjectionMatrix;
+};
+
+layout(location = 0) in vec3 aPosition;	// world space
+layout(location = 1) in vec3 aNormal;	// world space
+layout(location = 2) in vec2 aTexCoord;
 layout(location = 3) in vec3 aTangent;
 layout(location = 4) in vec3 aBitangent;
 
 out vec2 vTexCoord;
+out vec3 vPosition;
+out vec3 vNormal;
+
 
 void main()
 {
-    vTexCoord = aTexCoord.xy;
+	vTexCoord = aTexCoord;
+	vPosition = vec3(uWorldMatrix * vec4(aPosition, 1.0));
+	vNormal =	vec3(uWorldMatrix * vec4(aNormal, 0.0));
+	
 
-    // Normally do not set the clipping scale manualy
-    float clippingScale = 5.0;
-
-    gl_Position = vec4(aPosition,clippingScale);
-
-    // We flip Patrick
-    gl_Position.z = -gl_Position.z;
+	gl_Position = uWorldViewProjectionMatrix * vec4(aPosition, 1.0);
 }
 
 #elif defined(FRAGMENT) ///////////////////////////////////////////////

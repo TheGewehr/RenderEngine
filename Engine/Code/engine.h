@@ -13,7 +13,16 @@ typedef glm::vec4  vec4;
 typedef glm::ivec2 ivec2;
 typedef glm::ivec3 ivec3;
 typedef glm::ivec4 ivec4;
-typedef glm::mat4  mat4;
+typedef glm::mat4x4  mat4;
+
+class Camera;
+class App;
+
+const mat4 identityMatrix = mat4(
+    1.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 1.0f);
 
 ///////////////////
 // Quad with texture structs
@@ -106,6 +115,7 @@ struct Mesh
     std::vector<Submesh> submeshes;
     GLuint vertexBufferHandle;
     GLuint indexBufferHandle;
+    GLuint uniformBufferHandle;
 };
 
 struct Material
@@ -131,48 +141,7 @@ struct Program
     VertexShaderLayout vertexInputLayout;
 };
 
-enum Camera_Movement {
-    CAMERA_FORWARD,
-    CAMERA_BACKWARD,
-    CAMERA_LEFT,
-    CAMERA_RIGHT
-};
 
-class Camera
-{
-private:
-
-    // Default camera values
-    const float YAW = -90.0f;
-    const float PITCH = 0.0f;
-    const float SPEED = 2.5f;
-    const float SENSITIVITY = 0.1f;
-    const float ZOOM = 45.0f;
-
-public:
-    Camera();
-    Camera(glm::vec3 position, glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = -90.0f, float pitch = 0.0f);
-
-    vec3 position;
-    vec3 front;
-    vec3 up;
-    vec3 right;
-    vec3 worldUp;
-
-    float yaw = -90.0f;
-    float pitch = 0.0f;
-
-    float movementSpeed = 0.5f;
-    float mouseSensitivity = 0.5f;
-    float zoom = 0.5f;
-
-    mat4 GetViewMatrix();
-    void ProcessKeyboard(Camera_Movement direction, float deltaTime);
-    void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
-    void ProcessMouseScroll(float yoffset);
-
-    void UpdateCameraVectors();
-};
 
 struct Object
 {
@@ -189,6 +158,26 @@ enum Mode
     Mode_TexturedQuad,
     Mode_AlbedoPatrick,
     Mode_Count
+};
+
+class Camera
+{
+public:
+    float speed;
+    float sensitivity;
+    vec3 X, Y, Z, Position, currentReference;
+    mat4 ViewMatrix, ViewMatrixInverse;
+    float zNear;
+    float zFar;
+    float fov;
+
+
+
+    void SetValues();
+
+    void CalculateViewMatrix();
+
+    void UpdateCamera(App* app);
 };
 
 
@@ -234,7 +223,7 @@ struct App
     GLuint vao;
 
     // Camera
-    Camera camera = Camera(vec3(0.25f, 1.25f, 6.75f));
+    Camera camera;
 
     std::vector<Texture> textures;
     std::vector<Material>  materials;
@@ -243,6 +232,10 @@ struct App
     std::vector<Program>  programs;
 
     std::vector<Object> objects;
+
+
+    int maxUniformBufferSize;
+    int uniformBlockAlignment;
 
     
 };
@@ -254,7 +247,6 @@ void Gui(App* app);
 void Update(App* app);
 
 void Render(App* app);
-
 
 
 
