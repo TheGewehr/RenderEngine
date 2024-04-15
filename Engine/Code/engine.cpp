@@ -688,10 +688,18 @@ void Init(App* app)
     
     //Objects
     Object object;
-    object.position = vec3(0.0f, 0.0f, 0.0f);
     object.worldMatrix = identityMatrix;
+    object.SetTransform(vec3(1.f, 0.f, 0.f));
     object.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
     app->objects.push_back(object);
+
+    Object sobject;    
+    sobject.worldMatrix = identityMatrix;
+    sobject.SetTransform(vec3(-1.f, 0.f, 0.f));
+    sobject.SetScale(vec3(1.4f, 5.f,0.3f));
+    sobject.SetRotation(vec3(8.f,45.f,3.f));
+    sobject.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
+    app->objects.push_back(sobject);
 
     glEnable(GL_DEPTH_TEST);
     glDebugMessageCallback(OnGlError, app);
@@ -864,9 +872,20 @@ void Camera::UpdateCamera(App* app)
 {
 
     vec3 newPos(0, 0, 0);
-    float spd = speed * app->deltaTime * 1000.f;
+    float spd = 1.f;
+    float normalSpd = speed * app->deltaTime * 1000.f;
+    float xtraSpd = normalSpd * 1.75f;
 
     // keyboard movement
+
+    if (app->input.keys[Key::K_SPACE])
+    {
+        spd = xtraSpd;
+    }
+    else
+    {
+        spd = normalSpd;
+    }
 
     if (app->input.keys[Key::K_Q])
     {
@@ -897,6 +916,8 @@ void Camera::UpdateCamera(App* app)
     {
         newPos += X * spd;
     }
+
+    
 
     Position += newPos;
     currentReference += newPos;

@@ -147,10 +147,57 @@ struct Object
 {
     mat4 worldMatrix;
     mat4 worldViewProjection;
-    vec3 position;
+    vec3 position = vec3(0.0f,0.0f,0.0f);
+    vec3 rotation = vec3(0.0f, 0.0f, 0.0f);
+    vec3 scale = vec3(1.0f, 1.0f, 1.0f);
     u32 modelIndex;
     //u32 localParamsOffset;
     //u32 localParamsSize;
+
+    void UpdateWorldMatrix()
+    {
+        // Reset the world matrix
+        worldMatrix = glm::mat4(1.0f); // Identity matrix
+        // Apply transformations
+        worldMatrix = glm::translate(worldMatrix, position);
+        worldMatrix = glm::rotate(worldMatrix, rotation.x, vec3(1, 0, 0)); // Rotate around X axis
+        worldMatrix = glm::rotate(worldMatrix, rotation.y, vec3(0, 1, 0)); // Rotate around Y axis
+        worldMatrix = glm::rotate(worldMatrix, rotation.z, vec3(0, 0, 1)); // Rotate around Z axis
+        worldMatrix = glm::scale(worldMatrix, scale);
+    }
+
+    void SetTransform(vec3 transform)
+    {
+        position = transform;
+        UpdateWorldMatrix();
+    }
+
+    vec3 GetTransform()
+    {
+        return position;
+    }
+
+    void SetRotation(vec3 new_rotation)
+    {
+        rotation = new_rotation;
+        UpdateWorldMatrix();
+    }
+
+    vec3 GetRotation()
+    {
+        return rotation;
+    }
+
+    void SetScale(vec3 new_scale)
+    {
+        scale = new_scale;
+        UpdateWorldMatrix();
+    }
+
+    vec3 GetScale()
+    {
+        return scale;
+    }
 };
 
 enum Mode
