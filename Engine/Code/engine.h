@@ -141,7 +141,28 @@ struct Program
     VertexShaderLayout vertexInputLayout;
 };
 
+struct Buffer 
+{
+    GLuint handle;
+    GLenum type;
+    u32 size;
+    u32 head;
+    void* data;
+};
 
+enum LightType
+{
+    LightType_Directional,
+    LightType_Point,
+};
+
+struct Light
+{
+    int type;
+    vec3 color;
+    vec3 position;
+    float range;
+};
 
 struct Object
 {
@@ -151,8 +172,8 @@ struct Object
     vec3 rotation = vec3(0.0f, 0.0f, 0.0f);
     vec3 scale = vec3(1.0f, 1.0f, 1.0f);
     u32 modelIndex;
-    //u32 localParamsOffset;
-    //u32 localParamsSize;
+    u32 localParamsOffset;
+    u32 localParamsSize;
 
     void UpdateWorldMatrix()
     {
