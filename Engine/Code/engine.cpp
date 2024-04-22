@@ -27,6 +27,25 @@
 #include <assimp/postprocess.h>
 #include <iostream>
 
+
+bool IsPowerOf2(u32 value);
+
+u32 Align(u32 value, u32 alignment);
+
+Buffer CreateBuffer(u32 size, GLenum type, GLenum usage);
+
+void BindBuffer(const Buffer& buffer);
+
+void MapBuffer(Buffer& buffer, GLenum access);
+
+void UnmapBuffer(Buffer& buffer);
+
+void AlignHead(Buffer& buffer, u32 alignment);
+
+void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment);
+
+
+
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
     if (severity == GL_DEBUG_SEVERITY_NOTIFICATION)
@@ -610,9 +629,9 @@ u32 LoadModel(App* app, const char* filename)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
 
-    glGenBuffers(1, &mesh.uniformBufferHandle);
-    glBindBuffer(GL_UNIFORM_BUFFER, mesh.uniformBufferHandle);
-    glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
+    //glGenBuffers(1, &mesh.uniformBufferHandle);
+    //glBindBuffer(GL_UNIFORM_BUFFER, mesh.uniformBufferHandle);
+    //glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
 
     u32 indicesOffset = 0;
     u32 verticesOffset = 0;
@@ -634,7 +653,7 @@ u32 LoadModel(App* app, const char* filename)
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    //glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     return modelIdx;
 }
@@ -656,10 +675,12 @@ void Init(App* app)
 
     // Camera
     
-    app->camera.SetValues();
+    app->camera.SetValues();    
 
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
+
+    app->cbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
 
     // Geometry
     glGenBuffers(1, &app->embeddedVertices);
@@ -712,6 +733,19 @@ void Init(App* app)
     sobject.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
     app->objects.push_back(sobject);
 
+    //Lights
+    Light directionalLight;
+    directionalLight.color = vec3(1.f,0.f,0.f);
+    directionalLight.direction = vec3(0.f, -1.f, 0.f);
+    directionalLight.type = LightType::LightType_Directional;
+    app->lights.push_back(directionalLight);
+
+    Light pointLight;
+    pointLight.color = vec3(0.f, 1.f, 0.f);
+    pointLight.position = vec3(0.f, 1.f, 0.f);
+    pointLight.type = LightType::LightType_Point;
+    app->lights.push_back(pointLight);
+
     glEnable(GL_DEPTH_TEST);
     glDebugMessageCallback(OnGlError, app);
 }
@@ -742,36 +776,81 @@ void Update(App* app)
         }
     }
 
-    for (int i = 0; i < app->objects.size(); i++)
-    {
-        Object& Object = app->objects[i];
+    MapBuffer(app->cbuffer, GL_WRITE_ONLY);
 
-        //update transform
+    // Global Params
+    app->globalParamsOffset = app->cbuffer.head;
+
+    PushVec3(app->cbuffer, app->camera.Position);
+
+    PushUInt(app->cbuffer, app->lights.size());
+
+    for (u32 i = 0; i < app->lights.size(); ++i)
+    {
+        AlignHead(app->cbuffer, sizeof(vec4));
+
+        Light& light = app->lights[i];
+        PushUInt(app->cbuffer, light.type);
+        PushVec3(app->cbuffer, light.color);
+        PushVec3(app->cbuffer, light.direction);
+        PushVec3(app->cbuffer, light.position);
+    }
+
+    app->globalParamsOffset = app->cbuffer.head - app->globalParamsOffset;
+
+    // Local Params
+    for (int i = 0; i < app->objects.size(); ++i)
+    {
+        AlignHead(app->cbuffer, app->uniformBlockAlignment);
+
+        Object& object = app->objects[i];
+
         float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
         mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
         mat4 view = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
+        mat4 world = object.worldMatrix;
+        mat4 worldViewProjection = projectionMatrix * view * world;
 
-        //update transform and view matrices
-        //sceneObject.worldMatrix = IdentityMatrix; --> only at the start;
-        Object.worldViewProjection = projectionMatrix * view * Object.worldMatrix;
-
-        //opengl stuff
-        glBindBuffer(GL_UNIFORM_BUFFER, app->meshes[app->models[Object.modelIndex].meshIdx].uniformBufferHandle);
-        u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-        u32 bufferHead = 0;
-
-        Object.localParamsOffset = bufferHead;
-
-        memcpy(bufferData + bufferHead, glm::value_ptr(Object.worldMatrix), sizeof(mat4));
-        bufferHead += sizeof(mat4);
-
-        memcpy(bufferData + bufferHead, glm::value_ptr(Object.worldViewProjection), sizeof(mat4));
-        bufferHead += sizeof(mat4);
-
-        Object.localParamsSize = bufferHead - Object.localParamsOffset;
-
-        glUnmapBuffer(GL_UNIFORM_BUFFER);
+        object.localParamsOffset = app->cbuffer.head;
+        PushMat4(app->cbuffer, world);
+        PushMat4(app->cbuffer, worldViewProjection);
+        object.localParamsSize = app->cbuffer.head - object.localParamsOffset;
     }
+
+    UnmapBuffer(app->cbuffer);
+
+    //for (int i = 0; i < app->objects.size(); i++)
+    //{
+    //    Object& Object = app->objects[i];
+    //
+    //    //update transform
+    //    float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+    //    mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
+    //    mat4 view = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
+    //
+    //    //update transform and view matrices
+    //    //sceneObject.worldMatrix = IdentityMatrix; --> only at the start;
+    //    Object.worldViewProjection = projectionMatrix * view * Object.worldMatrix;
+    //
+    //    //opengl stuff
+    //    glBindBuffer(GL_UNIFORM_BUFFER, app->meshes[app->models[Object.modelIndex].meshIdx].uniformBufferHandle);
+    //    u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+    //    u32 bufferHead = 0;
+    //
+    //    Object.localParamsOffset = bufferHead;
+    //
+    //    memcpy(bufferData + bufferHead, glm::value_ptr(Object.worldMatrix), sizeof(mat4));
+    //    bufferHead += sizeof(mat4);
+    //
+    //    memcpy(bufferData + bufferHead, glm::value_ptr(Object.worldViewProjection), sizeof(mat4));
+    //    bufferHead += sizeof(mat4);
+    //
+    //    Object.localParamsSize = bufferHead - Object.localParamsOffset;
+    //
+    //    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    //}
+
+    
 
 }
 
@@ -827,12 +906,11 @@ void Render(App* app)
             Model& model = app->models[app->objects[j].modelIndex];
             Mesh& mesh = app->meshes[model.meshIdx];
 
-            u32 blockOffset = 0;
-            u32 blockSize = sizeof(mat4) * 2;
+            
 
             for (u32 i = 0; i < mesh.submeshes.size(); ++i)
             {
-                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), mesh.uniformBufferHandle, blockOffset, blockSize);
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
 
                 GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
                 glBindVertexArray(vao);

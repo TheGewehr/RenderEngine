@@ -115,7 +115,7 @@ struct Mesh
     std::vector<Submesh> submeshes;
     GLuint vertexBufferHandle;
     GLuint indexBufferHandle;
-    GLuint uniformBufferHandle;
+    //GLuint uniformBufferHandle;
 };
 
 struct Material
@@ -158,10 +158,10 @@ enum LightType
 
 struct Light
 {
-    int type;
+    LightType type;
     vec3 color;
+    vec3 direction;
     vec3 position;
-    float range;
 };
 
 struct Object
@@ -292,6 +292,14 @@ struct App
 
     // Camera
     Camera camera;
+
+    //Lights
+    std::vector<Light> lights;
+
+    // Buffer
+    Buffer cbuffer;
+    u32 globalParamsOffset;
+
 
     std::vector<Texture> textures;
     std::vector<Material>  materials;
