@@ -898,15 +898,18 @@ void Render(App* app)
         // - set the blending state
         glEnable(GL_BLEND);
 
+        Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+        glUseProgram(texturedMeshProgram.handle);
+
+        for (int i = 0; i < app->lights.size(); i++)
+        {
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->maxUniformBufferSize);
+        }
+
         for (int j = 0; j < app->objects.size(); j++)
         {
-            Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
-            glUseProgram(texturedMeshProgram.handle);
-
             Model& model = app->models[app->objects[j].modelIndex];
-            Mesh& mesh = app->meshes[model.meshIdx];
-
-            
+            Mesh& mesh = app->meshes[model.meshIdx];            
 
             for (u32 i = 0; i < mesh.submeshes.size(); ++i)
             {
@@ -920,7 +923,7 @@ void Render(App* app)
 
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-                glUniform1i(app->programUniformTexture, 0);//
+                glUniform1i(app->programUniformTexture, 0);
 
                 Submesh& submesh = mesh.submeshes[i];
                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
