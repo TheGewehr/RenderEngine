@@ -762,12 +762,10 @@ void Update(App* app)
     // You can handle app->input keyboard/mouse here
     app->camera.UpdateCamera(app);
 
-    for (u64 i = 0; i < app->programs.size(); i++)
-    {
+    for (u64 i = 0; i < app->programs.size(); i++) {
         Program& program = app->programs[i];
         u64 currentTimestamp = GetFileLastWriteTimestamp(program.filepath.c_str());
-        if (currentTimestamp > program.lastWriteTimestamp)
-        {
+        if (currentTimestamp > program.lastWriteTimestamp) {
             glDeleteProgram(program.handle);
             String programSource = ReadTextFile(program.filepath.c_str());
             const char* programName = program.programName.c_str();
@@ -782,16 +780,14 @@ void Update(App* app)
     app->globalParamsOffset = app->cbuffer.head;
 
     PushVec3(app->cbuffer, app->camera.Position);
-
     PushUInt(app->cbuffer, app->lights.size());
 
-    for (u32 i = 0; i < app->lights.size(); ++i)
-    {
-        AlignHead(app->cbuffer, sizeof(vec4));
+    for (u32 i = 0; i < app->lights.size(); ++i) {
+        AlignHead(app->cbuffer, sizeof(vec4)); // Align each struct to vec4 size for std140 layout compatibility
 
         Light& light = app->lights[i];
         PushUInt(app->cbuffer, light.type);
-        PushVec3(app->cbuffer, light.color);
+        PushVec3(app->cbuffer, light.color); // vec3s are padded to vec4 in std140
         PushVec3(app->cbuffer, light.direction);
         PushVec3(app->cbuffer, light.position);
     }
@@ -799,21 +795,20 @@ void Update(App* app)
     app->globalParamsOffset = app->cbuffer.head - app->globalParamsOffset;
 
     // Local Params
-    for (int i = 0; i < app->objects.size(); ++i)
-    {
+    for (int i = 0; i < app->objects.size(); ++i) {
         AlignHead(app->cbuffer, app->uniformBlockAlignment);
 
         Object& object = app->objects[i];
 
         float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
         mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
-        mat4 view = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
-        mat4 world = object.worldMatrix;
-        mat4 worldViewProjection = projectionMatrix * view * world;
+        mat4 viewMatrix = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
+        mat4 worldMatrix = object.worldMatrix;
+        mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * worldMatrix;
 
         object.localParamsOffset = app->cbuffer.head;
-        PushMat4(app->cbuffer, world);
-        PushMat4(app->cbuffer, worldViewProjection);
+        PushMat4(app->cbuffer, worldMatrix);
+        PushMat4(app->cbuffer, worldViewProjectionMatrix);
         object.localParamsSize = app->cbuffer.head - object.localParamsOffset;
     }
 
