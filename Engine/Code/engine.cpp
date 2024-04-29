@@ -683,26 +683,26 @@ void Init(App* app)
     app->cbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
 
     // Geometry
-    glGenBuffers(1, &app->embeddedVertices);
-    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glGenBuffers(1, &app->embeddedElements);
-    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedElements);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    //glGenBuffers(1, &app->embeddedVertices);
+    //glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
+    //
+    //glGenBuffers(1, &app->embeddedElements);
+    //glBindBuffer(GL_ARRAY_BUFFER, app->embeddedElements);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // Attribute State
-    glGenVertexArrays(1, &app->vao);
-    glBindVertexArray(app->vao);
-    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)12);
-    glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedElements);
-    glBindVertexArray(0);
+    //glGenVertexArrays(1, &app->vao);
+    //glBindVertexArray(app->vao);
+    //glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
+    //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)0);
+    //glEnableVertexAttribArray(0);
+    //glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)12);
+    //glEnableVertexAttribArray(1);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedElements);
+    //glBindVertexArray(0);
 
     // Program Initialization
     app->texturedMeshProgramIdx = LoadProgram(app, "AlbedoPatrick.glsl", "SHOW_TEXTURED_MESH");
@@ -712,9 +712,9 @@ void Init(App* app)
     // Texture initialization
     //app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
-    app->blackTexIdx = LoadTexture2D(app, "color_black.png");
-    app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
-    app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
+    //app->blackTexIdx = LoadTexture2D(app, "color_black.png");
+    //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
+    //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
     
     //LoadModel(app, "Models/Sphere/sphere.obj");
     
@@ -740,11 +740,11 @@ void Init(App* app)
     directionalLight.type = LightType::LightType_Directional;
     app->lights.push_back(directionalLight);
 
-    Light pointLight;
-    pointLight.color = vec3(0.f, 1.f, 0.f);
-    pointLight.position = vec3(0.f, 1.f, 0.f);
-    pointLight.type = LightType::LightType_Point;
-    app->lights.push_back(pointLight);
+    //Light pointLight;
+    //pointLight.color = vec3(0.f, 1.f, 0.f);
+    //pointLight.position = vec3(0.f, 1.f, 0.f);
+    //pointLight.type = LightType::LightType_Point;
+    //app->lights.push_back(pointLight);
 
     glEnable(GL_DEPTH_TEST);
     glDebugMessageCallback(OnGlError, app);
@@ -780,6 +780,7 @@ void Update(App* app)
     app->globalParamsOffset = app->cbuffer.head;
 
     PushVec3(app->cbuffer, app->camera.Position);
+
     PushUInt(app->cbuffer, app->lights.size());
 
     for (u32 i = 0; i < app->lights.size(); ++i) {
@@ -923,7 +924,7 @@ void Render(App* app)
                 Submesh& submesh = mesh.submeshes[i];
                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
             }
-        }        
+        }  
     }
     break;
 

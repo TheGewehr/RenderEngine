@@ -3,6 +3,8 @@
 ///////////////////////////////////////////////////////////////////////
 #ifdef SHOW_TEXTURED_MESH
 
+#define MaxLightNumber 1
+
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
 struct Light {
@@ -19,7 +21,7 @@ layout(location = 2) in vec2 aTexCoord;
 layout(binding = 0, std140) uniform globalParams {
     vec3 uCameraPosition;
     unsigned int uLightCount;
-    Light uLight[1];
+    Light uLight[MaxLightNumber];
 };
 
 layout(binding = 1, std140) uniform localParams {
@@ -30,17 +32,23 @@ layout(binding = 1, std140) uniform localParams {
 out vec3 vPosition;
 out vec3 vNormal;
 out vec3 vViewDir;
-out vec3 vLightDir[1];
-out vec3 vLightColor[1];
+out vec3 vLightDir[MaxLightNumber];
+out vec3 vLightColor[MaxLightNumber];
 out vec2 vTexCoord;
 
 void main() {
 
-	for(int i = 0; i < 1; i++) {
+	//for(int i = 0; i < MaxLightNumber; i++) {
     //// Use a test directional light pointing in the Z direction
-    vLightDir[i] = vec3(0.0, 0.0, -1.0); // Adjust this as necessary to point towards your geometry
-    vLightColor[i] = vec3(1.0, 1.0, 1.0); // Bright white light
-	}
+    //vLightDir[i] = vec3(0.0, 0.0, -1.0); // Adjust this as necessary to point towards your geometry
+    //vLightColor[i] = vec3(1.0, 1.0, 1.0); // Bright white light
+	//}
+
+    //Light lighty;
+    //lighty.type = 1;
+    //lighty.color = vec3(1.0, 1.0, 1.0);
+    //lighty.direction = vec3(1.0, 1.0, 1.0);
+    //lighty.position = vec3(1.0, 1.0, 1.0);
 
     vPosition = vec3(uWorldMatrix * vec4(aPosition, 1.0));
     vNormal = normalize(mat3(uWorldMatrix) * aNormal);
@@ -64,8 +72,8 @@ void main() {
 in vec3 vPosition;
 in vec3 vNormal;
 in vec3 vViewDir;
-in vec3 vLightDir[1];
-in vec3 vLightColor[1];
+in vec3 vLightDir[MaxLightNumber];
+in vec3 vLightColor[MaxLightNumber];
 in vec2 vTexCoord;
 
 uniform sampler2D uTexture;
@@ -76,8 +84,8 @@ void main() {
     vec3 resultColor = vec3(0.0);
     vec4 texColor = texture(uTexture, vTexCoord);
 
-    for (int i = 0; i < 1; i++) {
-        vec3 lightDir = normalize(vLightDir[i]);
+    for (int i = 0; i < MaxLightNumber; i++) {
+        vec3 lightDir = vLightDir[i];
         vec3 lightColor = vLightColor[i];
 
         // Diffuse component
