@@ -728,7 +728,7 @@ void Init(App* app)
     Object sobject;    
     sobject.worldMatrix = identityMatrix;
     sobject.SetTransform(vec3(-1.f, 0.f, 0.f));
-    sobject.SetScale(vec3(1.4f, 5.f,0.3f));
+    //sobject.SetScale(vec3(1.4f, 5.f,0.3f));
     sobject.SetRotation(vec3(8.f,45.f,3.f));
     sobject.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
     app->objects.push_back(sobject);
