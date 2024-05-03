@@ -100,7 +100,7 @@ void main() {
 
         // Specular component
         vec3 reflectDir = reflect(lightDir, norm);
-        float spec = pow(max(dot(vViewDir, reflectDir), 0.0), 32.0);
+        float spec = pow(max(dot(vViewDir, reflectDir), 0.0), 300);
         vec3 specular = spec * lightColor;
 
         resultColor += (diffuse + specular) * vec3(texColor);

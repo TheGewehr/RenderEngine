@@ -223,9 +223,15 @@ struct Object
 
 enum Mode
 {
-    Mode_TexturedQuad,
-    Mode_AlbedoPatrick,
-    Mode_Count
+    //Mode_TexturedQuad,
+    //Mode_AlbedoPatrick,
+    //Mode_Count
+
+    Mode_FinalRender,
+    Mode_Diffuse,
+    Mode_Specular,
+    Mode_Albedo,
+    Mode_Normal,
 };
 
 class Camera
@@ -265,7 +271,12 @@ struct App
     ivec2 displaySize;
 
     // program indices
-    u32 texturedMeshProgramIdx;
+    u32 finalRender;
+    u32 diffuse;
+    u32 specular;
+    u32 albedo;
+    u32 normal;
+
 
     // texture indices
     u32 diceTexIdx;

@@ -671,7 +671,7 @@ void Init(App* app)
     // - textures
 
     //app->mode = Mode_TexturedQuad;
-    app->mode = Mode_AlbedoPatrick;
+    app->mode = Mode_FinalRender;
 
     // Camera
     
@@ -705,9 +705,25 @@ void Init(App* app)
     //glBindVertexArray(0);
 
     // Program Initialization
-    app->texturedMeshProgramIdx = LoadProgram(app, "AlbedoPatrick.glsl", "SHOW_TEXTURED_MESH");
-    Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+    app->finalRender = LoadProgram(app, "FinalRender.glsl", "SHOW_TEXTURED_MESH");
+    Program& texturedMeshProgram = app->programs[app->finalRender];
     LoadProgramAttributes(texturedMeshProgram);
+
+    app->diffuse = LoadProgram(app, "Diffuse.glsl", "SHOW_TEXTURED_MESH");
+    Program& texturedMeshProgram1 = app->programs[app->diffuse];
+    LoadProgramAttributes(texturedMeshProgram1);
+
+    app->specular = LoadProgram(app, "Specular.glsl", "SHOW_TEXTURED_MESH");
+    Program& texturedMeshProgram2 = app->programs[app->specular];
+    LoadProgramAttributes(texturedMeshProgram2);
+
+    app->albedo = LoadProgram(app, "Albedo.glsl", "SHOW_TEXTURED_MESH");
+    Program& texturedMeshProgram3 = app->programs[app->albedo];
+    LoadProgramAttributes(texturedMeshProgram3);
+
+    app->normal = LoadProgram(app, "Normal.glsl", "SHOW_TEXTURED_MESH");
+    Program& texturedMeshProgram4 = app->programs[app->normal];
+    LoadProgramAttributes(texturedMeshProgram4);
     
     // Texture initialization
     //app->diceTexIdx = LoadTexture2D(app, "dice.png");
@@ -752,9 +768,47 @@ void Init(App* app)
 
 void Gui(App* app)
 {
-    //ImGui::Begin("Info");
-    //ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
-    //ImGui::End();
+    ImGui::Begin("Info");
+    ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
+
+    if (ImGui::Button("Final Render"))
+    {
+        app->mode = Mode_FinalRender;
+    }
+
+    // Add some space between buttons
+    ImGui::SameLine();
+
+    // Button for setting colorValue to 2
+    if (ImGui::Button("Diffuse"))
+    {
+        app->mode = Mode_Diffuse;
+    }
+
+    // Add some space between buttons
+    ImGui::SameLine();
+
+    // Button for setting colorValue to 3
+    if (ImGui::Button("Specular"))
+    {
+        app->mode = Mode_Specular;
+    }
+
+    if (ImGui::Button("Albedo"))
+    {
+        app->mode = Mode_Albedo;
+    }
+
+    // Add some space between buttons
+    ImGui::SameLine();
+
+    // Button for setting colorValue to 2
+    if (ImGui::Button("Normal"))
+    {
+        app->mode = Mode_Normal;
+    }
+
+    ImGui::End();
 }
 
 void Update(App* app)
@@ -855,33 +909,33 @@ void Render(App* app)
    
     switch (app->mode)
     {
-    case Mode_TexturedQuad:
-    {
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-
-        Program& programTexturedGeometry = app->programs[app->texturedMeshProgramIdx];
-        glUseProgram(programTexturedGeometry.handle);
-        glBindVertexArray(app->vao);
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        glUniform1i(app->programUniformTexture, 0);
-        glActiveTexture(GL_TEXTURE0);
-        GLuint textureHandle = app->textures[app->diceTexIdx].handle;
-        glBindTexture(GL_TEXTURE_2D, textureHandle);
-
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
-
-        glBindVertexArray(0);
-        glUseProgram(0);
-
-    }
-    break;
-    case Mode_AlbedoPatrick:
+    //case Mode_TexturedQuad:
+    //{
+    //    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //
+    //    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+    //
+    //    Program& programTexturedGeometry = app->programs[app->texturedMeshProgramIdx];
+    //    glUseProgram(programTexturedGeometry.handle);
+    //    glBindVertexArray(app->vao);
+    //
+    //    glEnable(GL_BLEND);
+    //    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //
+    //    glUniform1i(app->programUniformTexture, 0);
+    //    glActiveTexture(GL_TEXTURE0);
+    //    GLuint textureHandle = app->textures[app->diceTexIdx].handle;
+    //    glBindTexture(GL_TEXTURE_2D, textureHandle);
+    //
+    //    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+    //
+    //    glBindVertexArray(0);
+    //    glUseProgram(0);
+    //
+    //}
+    //break;
+    case Mode_FinalRender:
     {
 
         // - clear the framebuffer
@@ -894,7 +948,7 @@ void Render(App* app)
         // - set the blending state
         glEnable(GL_BLEND);
 
-        Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+        Program& texturedMeshProgram = app->programs[app->finalRender];
         glUseProgram(texturedMeshProgram.handle);
 
         for (int i = 0; i < app->lights.size(); i++)
@@ -925,6 +979,190 @@ void Render(App* app)
                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
             }
         }  
+    }
+    break;
+    case Mode_Diffuse:
+    {
+
+        // - clear the framebuffer
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // - set the viewport
+        glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+        // - set the blending state
+        glEnable(GL_BLEND);
+
+        Program& texturedMeshProgram = app->programs[app->diffuse];
+        glUseProgram(texturedMeshProgram.handle);
+
+        for (int i = 0; i < app->lights.size(); i++)
+        {
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->maxUniformBufferSize);
+        }
+
+        for (int j = 0; j < app->objects.size(); j++)
+        {
+            Model& model = app->models[app->objects[j].modelIndex];
+            Mesh& mesh = app->meshes[model.meshIdx];
+
+            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+            {
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+
+                GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+                glBindVertexArray(vao);
+
+                u32 submeshMaterialIdx = model.materialIdx[i];
+                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                glUniform1i(app->programUniformTexture, 0);
+
+                Submesh& submesh = mesh.submeshes[i];
+                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            }
+        }
+    }
+    break;
+    case Mode_Specular:
+    {
+
+        // - clear the framebuffer
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // - set the viewport
+        glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+        // - set the blending state
+        glEnable(GL_BLEND);
+
+        Program& texturedMeshProgram = app->programs[app->specular];
+        glUseProgram(texturedMeshProgram.handle);
+
+        for (int i = 0; i < app->lights.size(); i++)
+        {
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->maxUniformBufferSize);
+        }
+
+        for (int j = 0; j < app->objects.size(); j++)
+        {
+            Model& model = app->models[app->objects[j].modelIndex];
+            Mesh& mesh = app->meshes[model.meshIdx];
+
+            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+            {
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+
+                GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+                glBindVertexArray(vao);
+
+                u32 submeshMaterialIdx = model.materialIdx[i];
+                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                glUniform1i(app->programUniformTexture, 0);
+
+                Submesh& submesh = mesh.submeshes[i];
+                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            }
+        }
+    }
+    break;
+    case Mode_Albedo:
+    {
+
+        // - clear the framebuffer
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // - set the viewport
+        glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+        // - set the blending state
+        glEnable(GL_BLEND);
+
+        Program& texturedMeshProgram = app->programs[app->albedo];
+        glUseProgram(texturedMeshProgram.handle);
+
+        for (int i = 0; i < app->lights.size(); i++)
+        {
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->maxUniformBufferSize);
+        }
+
+        for (int j = 0; j < app->objects.size(); j++)
+        {
+            Model& model = app->models[app->objects[j].modelIndex];
+            Mesh& mesh = app->meshes[model.meshIdx];
+
+            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+            {
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+
+                GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+                glBindVertexArray(vao);
+
+                u32 submeshMaterialIdx = model.materialIdx[i];
+                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                glUniform1i(app->programUniformTexture, 0);
+
+                Submesh& submesh = mesh.submeshes[i];
+                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            }
+        }
+    }
+    break;
+    case Mode_Normal:
+    {
+
+        // - clear the framebuffer
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // - set the viewport
+        glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+        // - set the blending state
+        glEnable(GL_BLEND);
+
+        Program& texturedMeshProgram = app->programs[app->normal];
+        glUseProgram(texturedMeshProgram.handle);
+
+        for (int i = 0; i < app->lights.size(); i++)
+        {
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->maxUniformBufferSize);
+        }
+
+        for (int j = 0; j < app->objects.size(); j++)
+        {
+            Model& model = app->models[app->objects[j].modelIndex];
+            Mesh& mesh = app->meshes[model.meshIdx];
+
+            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+            {
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+
+                GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+                glBindVertexArray(vao);
+
+                u32 submeshMaterialIdx = model.materialIdx[i];
+                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                glUniform1i(app->programUniformTexture, 0);
+
+                Submesh& submesh = mesh.submeshes[i];
+                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            }
+        }
     }
     break;
 
