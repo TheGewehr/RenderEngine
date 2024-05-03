@@ -730,7 +730,7 @@ void Init(App* app)
     sobject.SetTransform(vec3(-1.f, 0.f, 0.f));
     //sobject.SetScale(vec3(1.4f, 5.f,0.3f));
     sobject.SetRotation(vec3(8.f,45.f,3.f));
-    sobject.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
+    sobject.modelIndex = LoadModel(app, "Models/Sphere/sphere.obj");
     app->objects.push_back(sobject);
 
     //Lights

@@ -3,7 +3,7 @@
 ///////////////////////////////////////////////////////////////////////
 #ifdef SHOW_TEXTURED_MESH
 
-#define MaxLightNumber 1
+#define MaxLightNumber 3
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
@@ -38,28 +38,34 @@ out vec2 vTexCoord;
 
 void main() {
 
-	//for(int i = 0; i < MaxLightNumber; i++) {
-    //// Use a test directional light pointing in the Z direction
-    //vLightDir[i] = vec3(0.0, 0.0, -1.0); // Adjust this as necessary to point towards your geometry
-    //vLightColor[i] = vec3(1.0, 1.0, 1.0); // Bright white light
-	//}
-
-    //Light lighty;
-    //lighty.type = 1;
-    //lighty.color = vec3(1.0, 1.0, 1.0);
-    //lighty.direction = vec3(1.0, 1.0, 1.0);
-    //lighty.position = vec3(1.0, 1.0, 1.0);
-
     vPosition = vec3(uWorldMatrix * vec4(aPosition, 1.0));
     vNormal = normalize(mat3(uWorldMatrix) * aNormal);
     vViewDir = normalize(uCameraPosition - vPosition);
     vTexCoord = aTexCoord;
 
+	//for(int i = 0; i < MaxLightNumber; i++) {
+    //// Use a test directional light pointing in the Z direction
+    vLightDir[0] = vec3(0.0,0.0,-1.0); // Adjust this as necessary to point towards your geometry
+    vLightColor[0] = vec3(1.0, 1.0, 1.0); // Bright white light
+	//}
+
+    vLightDir[1] = normalize(vec3(1.0f,1.0f,1.0f) - vPosition); // Adjust this as necessary to point towards your geometry
+    vLightColor[1] = vec3(1.0, 0.0, 1.0); // Bright white light
+
+    vLightDir[2] = normalize(vec3(1.0f,-1.0f,2.0f) - vPosition); // Adjust this as necessary to point towards your geometry
+    vLightColor[2] = vec3(1.0, 1.0, 0.0); // Bright white light
+
+    //Light lighty;
+    //lighty.type = 1;
+    //lighty.color = vec3(1.0, 1.0, 1.0);
+    //lighty.direction = vec3(1.0, 1.0, 1.0);
+    //lighty.position = vec3(1.0, 1.0, 1.0);    
+
     for(int i = 0; i < uLightCount; i++) {
         if(uLight[i].type == 0) {  // Directional light
             vLightDir[i] = normalize(uLight[i].direction);
         } else if(uLight[i].type == 1) {  // Point light
-            vLightDir[i] = normalize(uLight[i].position - vPosition);
+            vLightDir[i] = normalize(vec3(1.0f,1.0f,1.0f) - vPosition);
         }
         vLightColor[i] = uLight[i].color;
     }
