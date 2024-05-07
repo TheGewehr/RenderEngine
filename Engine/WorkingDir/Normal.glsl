@@ -86,10 +86,9 @@ uniform sampler2D uTexture;
 layout(location = 0) out vec4 oColor;
 
 void main() {
-    vec3 norm = normalize(vNormal);
-
+    
     // Remap the normal vector components from [-1, 1] to [0, 1]
-    vec3 normalColor = norm * 0.5 + 0.5;
+    vec3 normalColor = (vNormal + 1.0) / 2.0;
 
     // Output the normal colors
     oColor = vec4(normalColor, 1.0); // Use 1.0 for alpha to ensure full opacity
