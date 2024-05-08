@@ -35,6 +35,7 @@ out vec3 vViewDir;
 out vec3 vLightDir[MaxLightNumber];
 out vec3 vLightColor[MaxLightNumber];
 out vec2 vTexCoord;
+flat out unsigned int vLightCount;
 
 void main() {
 
@@ -42,6 +43,7 @@ void main() {
     vNormal = normalize(mat3(uWorldMatrix) * aNormal);
     vViewDir = normalize(uCameraPosition - vPosition);
     vTexCoord = aTexCoord;
+    vLightCount = uLightCount;
 
 	//for(int i = 0; i < MaxLightNumber; i++) {
     //// Use a test directional light pointing in the Z direction
@@ -81,6 +83,7 @@ in vec3 vViewDir;
 in vec3 vLightDir[MaxLightNumber];
 in vec3 vLightColor[MaxLightNumber];
 in vec2 vTexCoord;
+flat in unsigned int vLightCount;
 
 uniform sampler2D uTexture;
 layout(location = 0) out vec4 oColor;
@@ -90,7 +93,7 @@ void main() {
     vec3 resultColor = vec3(0.0);
     vec4 texColor = texture(uTexture, vTexCoord);
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < vLightCount; i++) {
         vec3 lightDir = vLightDir[i];
         vec3 lightColor = vLightColor[i];
 
@@ -99,7 +102,7 @@ void main() {
         vec3 diffuse = diff * lightColor;
 
         // Specular component
-        vec3 reflectDir = reflect(lightDir, norm);
+        vec3 reflectDir = reflect(-lightDir, norm);
         float spec = pow(max(dot(vViewDir, reflectDir), 0.0), 300);
         vec3 specular = spec * lightColor;
 

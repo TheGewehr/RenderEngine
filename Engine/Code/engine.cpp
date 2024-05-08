@@ -753,14 +753,15 @@ void Init(App* app)
     Light directionalLight;
     directionalLight.color = vec3(1.f,0.f,0.f);
     directionalLight.direction = vec3(0.f, -1.f, 0.f);
+    //directionalLight.position = vec3(1.0f, 1.0f, 1.0f);
     directionalLight.type = LightType::LightType_Directional;
     app->lights.push_back(directionalLight);
 
-    //Light pointLight;
-    //pointLight.color = vec3(0.f, 1.f, 0.f);
-    //pointLight.position = vec3(0.f, 1.f, 0.f);
-    //pointLight.type = LightType::LightType_Point;
-    //app->lights.push_back(pointLight);
+    Light pointLight;
+    pointLight.color = vec3(0.f, 1.f, 0.f);
+    pointLight.position = vec3(0.f, 1.f, 0.f);
+    pointLight.type = LightType::LightType_Point;
+    app->lights.push_back(pointLight);
 
     glEnable(GL_DEPTH_TEST);
     glDebugMessageCallback(OnGlError, app);
