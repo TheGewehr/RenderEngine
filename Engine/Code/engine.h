@@ -227,12 +227,16 @@ enum Mode
     //Mode_AlbedoPatrick,
     //Mode_Count
 
-    Mode_FinalRender,
-    Mode_Diffuse,
-    Mode_Specular,
-    Mode_Albedo,
-    Mode_Normal,
+    //Mode_FinalRender,
+    //Mode_Diffuse,
+    //Mode_Specular,
+    //Mode_Albedo,
+    //Mode_Normal,
+
+    Mode_ForwardRendering,
+    Mode_DeferredRendering
 };
+
 
 class Camera
 {
@@ -276,6 +280,8 @@ struct App
     u32 specular;
     u32 albedo;
     u32 normal;
+
+    u32 programToRenderForward = 0;
 
 
     // texture indices

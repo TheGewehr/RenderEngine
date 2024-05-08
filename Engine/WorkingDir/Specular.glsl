@@ -1,9 +1,6 @@
-///////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
 #ifdef SHOW_TEXTURED_MESH
 
-#define MaxLightNumber 3
+#define MaxLightNumber 8
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
@@ -35,6 +32,7 @@ out vec3 vViewDir;
 out vec3 vLightDir[MaxLightNumber];
 out vec3 vLightColor[MaxLightNumber];
 out vec2 vTexCoord;
+flat out unsigned int vLightCount;
 
 void main() {
 
@@ -42,18 +40,19 @@ void main() {
     vNormal = normalize(mat3(uWorldMatrix) * aNormal);
     vViewDir = normalize(uCameraPosition - vPosition);
     vTexCoord = aTexCoord;
+    vLightCount = uLightCount;
 
 	//for(int i = 0; i < MaxLightNumber; i++) {
     //// Use a test directional light pointing in the Z direction
-    vLightDir[0] = vec3(0.0,0.0,-1.0); // Adjust this as necessary to point towards your geometry
-    vLightColor[0] = vec3(1.0, 1.0, 1.0); // Bright white light
+    //vLightDir[0] = vec3(0.0,0.0,-1.0); // Adjust this as necessary to point towards your geometry
+    //vLightColor[0] = vec3(1.0, 1.0, 1.0); // Bright white light
 	//}
 
-    vLightDir[1] = normalize(vec3(1.0f,1.0f,1.0f) - vPosition); // Adjust this as necessary to point towards your geometry
-    vLightColor[1] = vec3(1.0, 0.0, 1.0); // Bright white light
+    //vLightDir[1] = normalize(vec3(1.0f,1.0f,1.0f) - vPosition); // Adjust this as necessary to point towards your geometry
+    //vLightColor[1] = vec3(1.0, 0.0, 1.0); // Bright white light
 
-    vLightDir[2] = normalize(vec3(1.0f,-1.0f,2.0f) - vPosition); // Adjust this as necessary to point towards your geometry
-    vLightColor[2] = vec3(1.0, 1.0, 0.0); // Bright white light
+    //vLightDir[2] = normalize(vec3(1.0f,-1.0f,2.0f) - vPosition); // Adjust this as necessary to point towards your geometry
+    //vLightColor[2] = vec3(1.0, 1.0, 0.0); // Bright white light
 
     //Light lighty;
     //lighty.type = 1;
@@ -81,6 +80,7 @@ in vec3 vViewDir;
 in vec3 vLightDir[MaxLightNumber];
 in vec3 vLightColor[MaxLightNumber];
 in vec2 vTexCoord;
+flat in unsigned int vLightCount;
 
 uniform sampler2D uTexture;
 layout(location = 0) out vec4 oColor;
@@ -90,7 +90,7 @@ void main() {
     vec3 resultColor = vec3(0.0);
     vec4 texColor = texture(uTexture, vTexCoord);
 
-    for (int i = 0; i < MaxLightNumber; i++) {
+    for (int i = 0; i < vLightCount; i++) {
         vec3 lightDir = vLightDir[i];
         vec3 lightColor = vLightColor[i];
 
@@ -99,7 +99,7 @@ void main() {
         vec3 diffuse = diff * lightColor;
 
         // Specular component
-        vec3 reflectDir = reflect(lightDir, norm);
+        vec3 reflectDir = reflect(-lightDir, norm);
         float spec = pow(max(dot(vViewDir, reflectDir), 0.0), 300);
         vec3 specular = spec * lightColor;
 
