@@ -280,7 +280,10 @@ struct App
     u32 specular;
     u32 albedo;
     u32 normal;
+    u32 lightDeferred;// Create a deferred light program
+    //u32 geoDeferred; // Create a Deferred geo program
 
+    // Other indices
     u32 programToRenderForward = 0;
 
 
@@ -291,6 +294,11 @@ struct App
     u32 normalTexIdx;
     u32 magentaTexIdx;
     //u32 modelIdx;
+    u32 gPosition;
+    u32 gNormal;
+    u32 gAlbedoSpec;
+
+    //u32 gPosition;
 
 
     // Mode
@@ -318,6 +326,7 @@ struct App
     u32 globalParamsOffset;
     u32 globalParamsSize;
 
+    GLuint gBuffer;
 
     std::vector<Texture> textures;
     std::vector<Material>  materials;

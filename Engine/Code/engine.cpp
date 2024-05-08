@@ -658,7 +658,29 @@ u32 LoadModel(App* app, const char* filename)
     return modelIdx;
 }
 
-
+//void SetupGBufferFramebuffer(App* app) {
+//    glGenFramebuffers(1, &app->gBuffer);
+//    glBindFramebuffer(GL_FRAMEBUFFER, app->gBuffer);
+//
+//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
+//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
+//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
+//
+//    // Set up depth buffer
+//    GLuint rboDepth;
+//    glGenRenderbuffers(1, &rboDepth);
+//    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+//    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, app->displaySize.x, app->displaySize.y);
+//    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+//
+//    GLuint attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+//    glDrawBuffers(3, attachments);
+//
+//    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+//        std::cout << "Framebuffer not complete!" << std::endl;
+//
+//    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+//}
 
 
 void Init(App* app)
@@ -679,6 +701,8 @@ void Init(App* app)
 
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
+
+    //SetupGBufferFramebuffer(app);
 
     app->cbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
 
@@ -726,6 +750,10 @@ void Init(App* app)
     app->normal = LoadProgram(app, "Normal.glsl", "SHOW_TEXTURED_MESH");
     Program& texturedMeshProgram4 = app->programs[app->normal];
     LoadProgramAttributes(texturedMeshProgram4);
+
+    //app->lightDeferred = LoadProgram(app, "LightDeferred.glsl", "SHOW_TEXTURED_MESH");
+    //Program& texturedMeshProgram5 = app->programs[app->lightDeferred];
+    //LoadProgramAttributes(texturedMeshProgram5);
     
     // Texture initialization
     //app->diceTexIdx = LoadTexture2D(app, "dice.png");
@@ -844,46 +872,60 @@ void Update(App* app)
         }
     }
 
-    MapBuffer(app->cbuffer, GL_READ_WRITE);
+    switch (app->mode)
+    {
+    case Mode_ForwardRendering:
+    {
+        MapBuffer(app->cbuffer, GL_READ_WRITE);
 
-    // Global Params
-    app->globalParamsOffset = app->cbuffer.head;
+        // Global Params
+        app->globalParamsOffset = app->cbuffer.head;
 
-    PushVec3(app->cbuffer, app->camera.Position);
+        PushVec3(app->cbuffer, app->camera.Position);
 
-    PushUInt(app->cbuffer, app->lights.size());
+        PushUInt(app->cbuffer, app->lights.size());
 
-    for (u32 i = 0; i < app->lights.size(); ++i) {
-        AlignHead(app->cbuffer, sizeof(vec4)); // Align each struct to vec4 size for std140 layout compatibility
+        for (u32 i = 0; i < app->lights.size(); ++i) {
+            AlignHead(app->cbuffer, sizeof(vec4)); // Align each struct to vec4 size for std140 layout compatibility
 
-        Light& light = app->lights[i];
-        PushUInt(app->cbuffer, light.type);
-        PushVec3(app->cbuffer, light.color); // vec3s are padded to vec4 in std140
-        PushVec3(app->cbuffer, light.direction);
-        PushVec3(app->cbuffer, light.position);
+            Light& light = app->lights[i];
+            PushUInt(app->cbuffer, light.type);
+            PushVec3(app->cbuffer, light.color); // vec3s are padded to vec4 in std140
+            PushVec3(app->cbuffer, light.direction);
+            PushVec3(app->cbuffer, light.position);
+        }
+
+        app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
+
+        // Local Params
+        for (int i = 0; i < app->objects.size(); ++i) {
+            AlignHead(app->cbuffer, app->uniformBlockAlignment);
+
+            Object& object = app->objects[i];
+
+            float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+            mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
+            mat4 viewMatrix = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
+            mat4 worldMatrix = object.worldMatrix;
+            mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * worldMatrix;
+
+            object.localParamsOffset = app->cbuffer.head;
+            PushMat4(app->cbuffer, worldMatrix);
+            PushMat4(app->cbuffer, worldViewProjectionMatrix);
+            object.localParamsSize = app->cbuffer.head - object.localParamsOffset;
+        }
+
+        UnmapBuffer(app->cbuffer);
+    }
+    break;
+    case Mode_DeferredRendering:
+    {
+        
+    }
+    break;
+    default:;
     }
 
-    app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
-
-    // Local Params
-    for (int i = 0; i < app->objects.size(); ++i) {
-        AlignHead(app->cbuffer, app->uniformBlockAlignment);
-
-        Object& object = app->objects[i];
-
-        float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
-        mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
-        mat4 viewMatrix = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
-        mat4 worldMatrix = object.worldMatrix;
-        mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * worldMatrix;
-
-        object.localParamsOffset = app->cbuffer.head;
-        PushMat4(app->cbuffer, worldMatrix);
-        PushMat4(app->cbuffer, worldViewProjectionMatrix);
-        object.localParamsSize = app->cbuffer.head - object.localParamsOffset;
-    }
-
-    UnmapBuffer(app->cbuffer);
 
     //for (int i = 0; i < app->objects.size(); i++)
     //{
@@ -935,10 +977,8 @@ void ForwardRender(App* app, u32 programIndex)
     Program& texturedMeshProgram = app->programs[programIndex];
     glUseProgram(texturedMeshProgram.handle);
 
-    //for (int i = 0; i < app->lights.size(); i++)
-    //{
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
-    //}
+    
 
     for (int j = 0; j < app->objects.size(); j++)
     {
@@ -964,6 +1004,117 @@ void ForwardRender(App* app, u32 programIndex)
         }
     }
 }
+
+// Deferred rendering related
+
+//void RenderQuad() {
+//    static GLuint quadVAO = 0;
+//    static GLuint quadVBO;
+//
+//    if (quadVAO == 0) {
+//        GLfloat quadVertices[] = {
+//            // Positions        // Texture Coords
+//            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+//            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+//             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+//             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+//        };
+//        glGenVertexArrays(1, &quadVAO);
+//        glGenBuffers(1, &quadVBO);
+//        glBindVertexArray(quadVAO);
+//        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+//        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+//        glEnableVertexAttribArray(0);
+//        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+//        glEnableVertexAttribArray(1);
+//        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+//    }
+//    glBindVertexArray(quadVAO);
+//    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+//    glBindVertexArray(0);
+//}
+//
+//void SetupGBufferTextures(App* app, int width, int height) {
+//    glGenTextures(1, &app->gPosition);
+//    glBindTexture(GL_TEXTURE_2D, app->gPosition);
+//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//
+//    glGenTextures(1, &app->gNormal);
+//    glBindTexture(GL_TEXTURE_2D, app->gNormal);
+//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//
+//    glGenTextures(1, &app->gAlbedoSpec);
+//    glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
+//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//}
+//
+//void SetGBufferTextures(App* app) {
+//    glActiveTexture(GL_TEXTURE0);
+//    glBindTexture(GL_TEXTURE_2D, app->gPosition); // Texture storing world-space positions
+//    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "uPositionMap"), 0);
+//
+//    glActiveTexture(GL_TEXTURE1);
+//    glBindTexture(GL_TEXTURE_2D, app->gNormal); // Texture storing normals
+//    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "uNormalMap"), 1);
+//
+//    glActiveTexture(GL_TEXTURE2);
+//    glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec); // Texture storing albedo and specular information
+//    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "uAlbedoSpecMap"), 2);
+//}
+//
+//
+//
+//void DeferredRender(App* app, u32 programIndex) {
+//    // Setup G-buffer
+//    glBindFramebuffer(GL_FRAMEBUFFER, app->gBuffer);
+//    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+//
+//    // Geometry Pass
+//    Program& geometryProgram = app->programs[programIndex];
+//    glUseProgram(geometryProgram.handle);
+//    for (int j = 0; j < app->objects.size(); j++) {
+//        Model& model = app->models[app->objects[j].modelIndex];
+//        Mesh& mesh = app->meshes[model.meshIdx];
+//
+//        for (u32 i = 0; i < mesh.submeshes.size(); ++i) {
+//            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+//
+//            GLuint vao = FindVAO(mesh, i, geometryProgram);
+//            glBindVertexArray(vao);
+//            Submesh& submesh = mesh.submeshes[i];
+//            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+//        }
+//    }
+//    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind the framebuffer for safety
+//
+//    // Lighting Pass
+//    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Draw directly to back buffer
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//    Program& lightingProgram = app->programs[app->lightDeferred];
+//    glUseProgram(lightingProgram.handle);
+//
+//    // Assuming texture bindings to G-buffer textures
+//    SetupGBufferTextures(app, app->displaySize.x, app->displaySize.y);
+//    SetGBufferTextures(app);  // Bind the G-buffer textures for use in the shader
+//
+//    // Render a full-screen quad
+//    RenderQuad();
+//}
+
 
 void Render(App* app)
 {
@@ -1003,7 +1154,7 @@ void Render(App* app)
     break;
     case Mode_DeferredRendering:
     {
-
+    //    DeferredRender(app, app->programToRenderForward);
     }
     break;
     default:;
