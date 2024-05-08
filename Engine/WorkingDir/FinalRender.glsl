@@ -45,15 +45,15 @@ void main() {
 
 	//for(int i = 0; i < MaxLightNumber; i++) {
     //// Use a test directional light pointing in the Z direction
-    vLightDir[0] = vec3(0.0,0.0,-1.0); // Adjust this as necessary to point towards your geometry
-    vLightColor[0] = vec3(1.0, 1.0, 1.0); // Bright white light
+    //vLightDir[0] = vec3(0.0,0.0,-1.0); // Adjust this as necessary to point towards your geometry
+    //vLightColor[0] = vec3(1.0, 1.0, 1.0); // Bright white light
 	//}
 
-    vLightDir[1] = normalize(vec3(1.0f,1.0f,1.0f) - vPosition); // Adjust this as necessary to point towards your geometry
-    vLightColor[1] = vec3(1.0, 0.0, 1.0); // Bright white light
+    //vLightDir[1] = normalize(vec3(1.0f,1.0f,1.0f) - vPosition); // Adjust this as necessary to point towards your geometry
+    //vLightColor[1] = vec3(1.0, 0.0, 1.0); // Bright white light
 
-    vLightDir[2] = normalize(vec3(1.0f,-1.0f,2.0f) - vPosition); // Adjust this as necessary to point towards your geometry
-    vLightColor[2] = vec3(1.0, 1.0, 0.0); // Bright white light
+    //vLightDir[2] = normalize(vec3(1.0f,-1.0f,2.0f) - vPosition); // Adjust this as necessary to point towards your geometry
+    //vLightColor[2] = vec3(1.0, 1.0, 0.0); // Bright white light
 
     //Light lighty;
     //lighty.type = 1;
@@ -90,7 +90,7 @@ void main() {
     vec3 resultColor = vec3(0.0);
     vec4 texColor = texture(uTexture, vTexCoord);
 
-    for (int i = 0; i < MaxLightNumber; i++) {
+    for (int i = 0; i < 1; i++) {
         vec3 lightDir = vLightDir[i];
         vec3 lightColor = vLightColor[i];
 

@@ -828,7 +828,7 @@ void Update(App* app)
         }
     }
 
-    MapBuffer(app->cbuffer, GL_WRITE_ONLY);
+    MapBuffer(app->cbuffer, GL_READ_WRITE);
 
     // Global Params
     app->globalParamsOffset = app->cbuffer.head;
@@ -847,7 +847,7 @@ void Update(App* app)
         PushVec3(app->cbuffer, light.position);
     }
 
-    app->globalParamsOffset = app->cbuffer.head - app->globalParamsOffset;
+    app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
 
     // Local Params
     for (int i = 0; i < app->objects.size(); ++i) {
@@ -951,10 +951,10 @@ void Render(App* app)
         Program& texturedMeshProgram = app->programs[app->finalRender];
         glUseProgram(texturedMeshProgram.handle);
 
-        for (int i = 0; i < app->lights.size(); i++)
-        {
-            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->maxUniformBufferSize);
-        }
+        //for (int i = 0; i < app->lights.size(); i++)
+        //{
+        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+        //}
 
         for (int j = 0; j < app->objects.size(); j++)
         {

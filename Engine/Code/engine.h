@@ -310,6 +310,7 @@ struct App
     // Buffer
     Buffer cbuffer;
     u32 globalParamsOffset;
+    u32 globalParamsSize;
 
 
     std::vector<Texture> textures;
