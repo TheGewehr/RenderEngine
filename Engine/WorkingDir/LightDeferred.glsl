@@ -3,86 +3,65 @@
 ///////////////////////////////////////////////////////////////////////
 #ifdef SHOW_LIGHTS
 
+#define MaxLightNumber 8
+
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
-struct Light
-{
-    unsigned int type;
-    vec3 color;
-    vec3 direction;
-    vec3 position;
-};
+layout(location = 0) in vec2 aPos;
+layout(location = 1) in vec2 aTexCoords;
 
-layout(location=0) in vec3 aPosition;
-layout(location=1) in vec3 aNormal;
-layout(location=2) in vec2 aTexCoord;
-
-layout(binding = 0, std140) uniform GlobalParams
-{
-    unsigned int uRenderMode;
-    vec3         uCameraPosition;
+layout(binding = 0, std140) uniform globalParams {
+    vec3 uCameraPosition;
     unsigned int uLightCount;
-    Light        uLight[16];
+    Light uLight[MaxLightNumber];
 };
 
-layout(binding = 1, std140) uniform LocalParams
-{
-    mat4 uWorldMatrix;
-    mat4 uWorldViewProjectionMatrix;
-};
-
-out vec2 vTexCoord;
-out vec3 vPosition; //In worldspace
-out vec3 vNormal;   //In worldspace
-out vec3 vViewDir;  //In worldspace
-
-uniform mat4 projectionViewMatrix;
+out vec2 TexCoords;
 
 void main()
 {
-    vTexCoord = aTexCoord;
-    vPosition = vec3(uWorldMatrix * vec4(aPosition, 1.0));
-    vNormal   = vec3(uWorldMatrix * vec4(aNormal, 0.0)); 
-    vViewDir  = uCameraPosition - vPosition;
-    gl_Position = uWorldViewProjectionMatrix * vec4(aPosition, 1.0f);
+    TexCoords = aTexCoords;
+    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);
 }   
 
 #elif defined(FRAGMENT) ///////////////////////////////////////////////
 
-struct Light
-{
-    unsigned int type; //0: Directional, 1 Point
-    vec3 color;
-    vec3 direction;
+out vec4 FragColor;
+
+in vec2 TexCoords;
+
+uniform sampler2D gPosition;
+uniform sampler2D gNormal;
+uniform sampler2D gTexCoords;
+
+struct Light {
     vec3 position;
+    vec3 color;
+    float intensity;
 };
 
-in vec2 vTexCoord;
-in vec3 vPosition; //In worldspace
-in vec3 vNormal;   //In worldspace
-in vec3 vViewDir;  //In worldspace
-
-uniform vec3 uLightColor;
-
-layout(binding = 0, std140) uniform GlobalParams
-{
-    unsigned int uRenderMode;
-    vec3 uCameraPosition;
-    unsigned int uLightCount;
-    Light uLight[16];
-};
-
-layout(location = 0) out vec4 rt0; //Albedo 
-layout(location = 1) out vec4 rt1; //Normals 
-layout(location = 2) out vec4 rt2; //Position 
-layout(location = 3) out vec4 rt3; //Final Render 
+uniform Light lights[16];  // Example: array of lights
+uniform int numLights;
+uniform vec3 viewPos;
 
 void main()
 {
-    rt0 = vec4(uLightColor, 1.0);
-    rt1 = vec4(vNormal, 1.0);
-    rt2 = vec4(vPosition, 1.0);
-    rt3 = rt0;
+    vec3 albedo = texture(gTexCoords, TexCoords).rgb;
+    vec3 pos = texture(gPosition, TexCoords).xyz;
+    vec3 normal = normalize(texture(gNormal, TexCoords).xyz);
+    vec3 ambient = 0.1 * albedo;
+
+    vec3 lighting = ambient;
+    for(int i = 0; i < numLights; i++)
+    {
+        // Simple directional light calculation
+        vec3 lightDir = normalize(lights[i].position - pos);
+        float diff = max(dot(normal, lightDir), 0.0);
+        vec3 diffuse = diff * lights[i].color * albedo * lights[i].intensity;
+        lighting += diffuse;
+    }
+
+    FragColor = vec4(lighting, 1.0);
 }
 
 #endif

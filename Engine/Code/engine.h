@@ -281,7 +281,7 @@ struct App
     u32 albedo;
     u32 normal;
     u32 lightDeferred;// Create a deferred light program
-    //u32 geoDeferred; // Create a Deferred geo program
+    u32 geoDeferred; // Create a Deferred geo program
 
     // Other indices
     u32 programToRenderForward = 0;
@@ -294,9 +294,10 @@ struct App
     u32 normalTexIdx;
     u32 magentaTexIdx;
     //u32 modelIdx;
-    u32 gPosition;
-    u32 gNormal;
-    u32 gAlbedoSpec;
+
+    // MRTs
+    GLuint gPosition, gNormal, gAlbedoSpec; // Texture handles for G-buffer
+    Buffer gbuffer; // Framebuffer handle for G-buffer
 
     //u32 gPosition;
 
@@ -325,8 +326,6 @@ struct App
     Buffer cbuffer;
     u32 globalParamsOffset;
     u32 globalParamsSize;
-
-    GLuint gBuffer;
 
     std::vector<Texture> textures;
     std::vector<Material>  materials;
