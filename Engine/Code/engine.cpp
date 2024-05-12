@@ -814,9 +814,25 @@ void Init(App* app)
     object.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
     app->objects.push_back(object);
 
+    Object object1;
+    object1.worldMatrix = identityMatrix;
+    object1.SetTransform(vec3(0.f, -4.f, 0.f));
+    object1.SetScale(vec3(1.4f, 2.f, 0.3f)); 
+    object1.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
+    object1.SetRotation(vec3(0.75f, 0.f, 0.f)); 
+    app->objects.push_back(object1);
+
+    Object object2;
+    object2.worldMatrix = identityMatrix;
+    object2.SetTransform(vec3(0.f, 0.f, 2.5f));
+    //object2.SetScale(vec3(1.4f, 2.f, 0.9f));
+    object2.modelIndex = LoadModel(app, "Models/Patrick/Patrick.obj");
+    object2.SetRotation(vec3(0.f, 160.f, 0.f)); app->objects.push_back(object2);
+    app->objects.push_back(object2);
+
     Object sobject;    
     sobject.worldMatrix = identityMatrix;
-    sobject.SetTransform(vec3(-1.f, 0.f, 0.f));
+    sobject.SetTransform(vec3(-1.f, -2.f, 0.f));
     //sobject.SetScale(vec3(1.4f, 5.f,0.3f));
     sobject.SetRotation(vec3(8.f,45.f,3.f));
     sobject.modelIndex = LoadModel(app, "Models/Sphere/sphere.obj");
@@ -1091,42 +1107,49 @@ void ForwardRender(App* app, u32 programIndex)
 // Deferred rendering related
 
 void GeometryPass(App* app) {
-
+    // Bind the G-buffer framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
-    //glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //glEnable(GL_DEPTH_TEST);
-    //glDepthFunc(GL_LESS);
 
-    // Use a shader that outputs position, normal, and albedo
+    // Set the viewport to match the framebuffer dimensions
+    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+    // Clear both the color and depth buffers
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Enable depth testing to handle overlapping geometry
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS); // Default, but good to ensure it's set
+
+    // Use the shader program that outputs to multiple render targets (MRTs)
     glUseProgram(app->programs[app->geoDeferred].handle);
 
-    // Assuming you have a setup for drawing each object
-    for (int j = 0; j < app->objects.size(); j++)
-    {
+    // Iterate through each object to draw
+    for (int j = 0; j < app->objects.size(); j++) {
         Model& model = app->models[app->objects[j].modelIndex];
         Mesh& mesh = app->meshes[model.meshIdx];
 
-        for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-        {
+        for (u32 i = 0; i < mesh.submeshes.size(); ++i) {
             GLuint vao = FindVAO(mesh, i, app->programs[app->geoDeferred]);
             glBindVertexArray(vao);
 
             u32 submeshMaterialIdx = model.materialIdx[i];
             Material& submeshMaterial = app->materials[submeshMaterialIdx];
 
+            // Bind the albedo texture to texture unit 0
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-            glUniform1i(app->programUniformTexture, 0);
+            glUniform1i(glGetUniformLocation(app->programs[app->geoDeferred].handle, "albedoMap"), 0);
 
-            // Bind and set up textures and other uniforms if necessary
+            // Draw the submesh
             Submesh& submesh = mesh.submeshes[i];
-            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(intptr_t)submesh.indexOffset);
         }
     }
 
+    // Unbind the framebuffer to switch back to the default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
 
 void RenderQuad() {
     static GLuint quadVAO = 0;
