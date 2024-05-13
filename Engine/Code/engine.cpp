@@ -682,42 +682,50 @@ u32 LoadModel(App* app, const char* filename)
 //    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 //}
 
-//void SetupGBuffer(App* app) {
-//    glGenFramebuffers(1, &app->gBuffer);
-//    glBindFramebuffer(GL_FRAMEBUFFER, app->gBuffer);
-//
-//    // Position
-//    glGenTextures(1, &app->gPosition);
-//    glBindTexture(GL_TEXTURE_2D, app->gPosition);
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, app->displaySize.x, app->displaySize.y, 0, GL_RGB, GL_FLOAT, NULL);
-//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
-//
-//    // Normal
-//    glGenTextures(1, &app->gNormal);
-//    glBindTexture(GL_TEXTURE_2D, app->gNormal);
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, app->displaySize.x, app->displaySize.y, 0, GL_RGB, GL_FLOAT, NULL);
-//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
-//
-//    // Albedo + Specular
-//    glGenTextures(1, &app->gAlbedoSpec);
-//    glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
-//
-//    GLuint attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-//    glDrawBuffers(3, attachments);
-//
-//    GLuint rboDepth;
-//    glGenRenderbuffers(1, &rboDepth);
-//    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
-//    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, app->displaySize.x, app->displaySize.y);
-//    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
-//
-//    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-//        std::cout << "Framebuffer not complete!" << std::endl;
-//
-//    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//}
+void SetupGBuffer(App* app) {
+
+    glGenFramebuffers(1, &app->gbuffer.handle);
+    glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
+
+    // - position color buffer
+    glGenTextures(1, &app->gPosition);
+    glBindTexture(GL_TEXTURE_2D, app->gPosition);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
+
+    // - normal color buffer
+    glGenTextures(1, &app->gNormal);
+    glBindTexture(GL_TEXTURE_2D, app->gNormal);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
+
+    // - color + specular color buffer
+    glGenTextures(1, &app->gAlbedoSpec);
+    glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
+
+    // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+    unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+    glDrawBuffers(3, attachments);
+
+    GLuint rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, app->displaySize.x, app->displaySize.y);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Framebuffer not complete!" << std::endl;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 
 void Init(App* app)
@@ -742,7 +750,8 @@ void Init(App* app)
     //SetupGBufferFramebuffer(app);
 
     app->cbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
-    app->gbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
+    SetupGBuffer(app);
+    //app->gbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
 
 
     // Geometry
@@ -977,32 +986,32 @@ void Update(App* app)
         UnmapBuffer(app->cbuffer);
     }
     break;
-    case Mode_DeferredRendering:
+    case Mode_DeferredRendering: // there is no buffer detected by renderdoc on deferred
     {
-        MapBuffer(app->gbuffer, GL_READ_WRITE);
+        MapBuffer(app->cbuffer, GL_READ_WRITE);
 
         // Global Params
-        app->globalParamsOffset = app->gbuffer.head;
+        app->globalParamsOffset = app->cbuffer.head;
 
-        PushVec3(app->gbuffer, app->camera.Position);
+        PushVec3(app->cbuffer, app->camera.Position);
 
-        PushUInt(app->gbuffer, app->lights.size());
+        PushUInt(app->cbuffer, app->lights.size());
 
         for (u32 i = 0; i < app->lights.size(); ++i) {
-            AlignHead(app->gbuffer, sizeof(vec4)); // Align each struct to vec4 size for std140 layout compatibility
+            AlignHead(app->cbuffer, sizeof(vec4)); // Align each struct to vec4 size for std140 layout compatibility
 
             Light& light = app->lights[i];
-            PushUInt(app->gbuffer, light.type);
-            PushVec3(app->gbuffer, light.color); // vec3s are padded to vec4 in std140
-            PushVec3(app->gbuffer, light.direction);
-            PushVec3(app->gbuffer, light.position);
+            PushUInt(app->cbuffer, light.type);
+            PushVec3(app->cbuffer, light.color); // vec3s are padded to vec4 in std140
+            PushVec3(app->cbuffer, light.direction);
+            PushVec3(app->cbuffer, light.position);
         }
 
-        app->globalParamsSize = app->gbuffer.head - app->globalParamsOffset;
+        app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
 
         // Local Params
         for (int i = 0; i < app->objects.size(); ++i) {
-            AlignHead(app->gbuffer, app->uniformBlockAlignment);
+            AlignHead(app->cbuffer, app->uniformBlockAlignment);
 
             Object& object = app->objects[i];
 
@@ -1012,11 +1021,11 @@ void Update(App* app)
             mat4 worldMatrix = object.worldMatrix;
             //mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * worldMatrix;
 
-            object.localParamsOffset = app->gbuffer.head;
-            PushMat4(app->gbuffer, worldMatrix);
-            PushMat4(app->gbuffer, viewMatrix);
-            PushMat4(app->gbuffer, projectionMatrix);
-            object.localParamsSize = app->gbuffer.head - object.localParamsOffset;
+            object.localParamsOffset = app->cbuffer.head;
+            PushMat4(app->cbuffer, worldMatrix);
+            PushMat4(app->cbuffer, viewMatrix);
+            PushMat4(app->cbuffer, projectionMatrix);
+            object.localParamsSize = app->cbuffer.head - object.localParamsOffset;
         }
 
         UnmapBuffer(app->cbuffer);
@@ -1107,47 +1116,45 @@ void ForwardRender(App* app, u32 programIndex)
 // Deferred rendering related
 
 void GeometryPass(App* app) {
-    // Bind the G-buffer framebuffer
+
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
-
-    // Set the viewport to match the framebuffer dimensions
-    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-
-    // Clear both the color and depth buffers
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Enable depth testing to handle overlapping geometry
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS); // Default, but good to ensure it's set
+    // - set the viewport
+    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-    // Use the shader program that outputs to multiple render targets (MRTs)
+    // - set the blending state
+    glEnable(GL_BLEND);
     glUseProgram(app->programs[app->geoDeferred].handle);
 
-    // Iterate through each object to draw
-    for (int j = 0; j < app->objects.size(); j++) {
+    //glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+    for (int j = 0; j < app->objects.size(); j++)
+    {
         Model& model = app->models[app->objects[j].modelIndex];
         Mesh& mesh = app->meshes[model.meshIdx];
 
-        for (u32 i = 0; i < mesh.submeshes.size(); ++i) {
+        for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+        {
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+
             GLuint vao = FindVAO(mesh, i, app->programs[app->geoDeferred]);
             glBindVertexArray(vao);
 
             u32 submeshMaterialIdx = model.materialIdx[i];
             Material& submeshMaterial = app->materials[submeshMaterialIdx];
 
-            // Bind the albedo texture to texture unit 0
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-            glUniform1i(glGetUniformLocation(app->programs[app->geoDeferred].handle, "albedoMap"), 0);
+            glUniform1i(app->programUniformTexture, 0);
 
-            // Draw the submesh
             Submesh& submesh = mesh.submeshes[i];
-            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(intptr_t)submesh.indexOffset);
+            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
         }
     }
 
     // Unbind the framebuffer to switch back to the default framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);    
 }
 
 
@@ -1179,7 +1186,7 @@ void RenderQuad() {
 
 void LightingPass(App* app) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // Draw to the default framebuffer
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(app->programs[app->lightDeferred].handle);
 
@@ -1199,8 +1206,6 @@ void LightingPass(App* app) {
     // Set screen size for lighting calculations
     glUniform2f(glGetUniformLocation(app->programs[app->lightDeferred].handle, "screenSize"), app->displaySize.x, app->displaySize.y);
 
-    // Render quad
-    RenderQuad();
 }
 
 
@@ -1279,7 +1284,9 @@ void LightingPass(App* app) {
 
 void DeferredRender(App* app) {
     GeometryPass(app);
-    LightingPass(app);
+    //LightingPass(app);
+    // Render quad
+    RenderQuad();
 }
 
 
