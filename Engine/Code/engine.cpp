@@ -134,12 +134,31 @@ u8 LoadProgramAttributes(Program& program)
     return attributeCount;
 }
 
-GLuint CreateProgramFromSource(String programSource, const char* shaderName)
-{
-    GLchar  infoLogBuffer[1024] = {};
+void CheckShaderCompileStatus(GLuint shader, const char* shaderName) {
+    GLint success;
+    GLchar infoLog[1024];
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(shader, 1024, NULL, infoLog);
+        std::cerr << "Error compiling shader (" << shaderName << "): " << infoLog << std::endl;
+    }
+}
+
+void CheckProgramLinkStatus(GLuint program, const char* programName) {
+    GLint success;
+    GLchar infoLog[1024];
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(program, 1024, NULL, infoLog);
+        std::cerr << "Error linking program (" << programName << "): " << infoLog << std::endl;
+    }
+}
+
+GLuint CreateProgramFromSource(String programSource, const char* shaderName) {
+    GLchar infoLogBuffer[1024] = {};
     GLsizei infoLogBufferSize = sizeof(infoLogBuffer);
     GLsizei infoLogSize;
-    GLint   success;
+    GLint success;
 
     char versionString[] = "#version 430\n";
     char shaderNameDefine[128];
@@ -175,33 +194,18 @@ GLuint CreateProgramFromSource(String programSource, const char* shaderName)
     GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vshader, ARRAY_COUNT(vertexShaderSource), vertexShaderSource, vertexShaderLengths);
     glCompileShader(vshader);
-    glGetShaderiv(vshader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(vshader, infoLogBufferSize, &infoLogSize, infoLogBuffer);
-        ELOG("glCompileShader() failed with vertex shader %s\nReported message:\n%s\n", shaderName, infoLogBuffer);
-    }
+    CheckShaderCompileStatus(vshader, "vertex");
 
     GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fshader, ARRAY_COUNT(fragmentShaderSource), fragmentShaderSource, fragmentShaderLengths);
     glCompileShader(fshader);
-    glGetShaderiv(fshader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(fshader, infoLogBufferSize, &infoLogSize, infoLogBuffer);
-        ELOG("glCompileShader() failed with fragment shader %s\nReported message:\n%s\n", shaderName, infoLogBuffer);
-    }
+    CheckShaderCompileStatus(fshader, "fragment");
 
     GLuint programHandle = glCreateProgram();
     glAttachShader(programHandle, vshader);
     glAttachShader(programHandle, fshader);
     glLinkProgram(programHandle);
-    glGetProgramiv(programHandle, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        glGetProgramInfoLog(programHandle, infoLogBufferSize, &infoLogSize, infoLogBuffer);
-        ELOG("glLinkProgram() failed with program %s\nReported message:\n%s\n", shaderName, infoLogBuffer);
-    }
+    CheckProgramLinkStatus(programHandle, shaderName);
 
     glUseProgram(0);
 
@@ -682,12 +686,21 @@ u32 LoadModel(App* app, const char* filename)
 //    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 //}
 
-void SetupGBuffer(App* app) {
+void CheckFramebufferStatus() {
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "Framebuffer not complete: " << status << std::endl;
+    }
+    else {
+        std::cout << "Framebuffer is complete" << std::endl;
+    }
+}
 
+void SetupGBuffer(App* app) {
     glGenFramebuffers(1, &app->gbuffer.handle);
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
 
-    // - position color buffer
+    // Position color buffer
     glGenTextures(1, &app->gPosition);
     glBindTexture(GL_TEXTURE_2D, app->gPosition);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -695,7 +708,7 @@ void SetupGBuffer(App* app) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
 
-    // - normal color buffer
+    // Normal color buffer
     glGenTextures(1, &app->gNormal);
     glBindTexture(GL_TEXTURE_2D, app->gNormal);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -703,7 +716,7 @@ void SetupGBuffer(App* app) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
 
-    // - color + specular color buffer
+    // Color + specular color buffer
     glGenTextures(1, &app->gAlbedoSpec);
     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -711,18 +724,19 @@ void SetupGBuffer(App* app) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
 
-    // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+    // Tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
     unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
     glDrawBuffers(3, attachments);
 
+    // Create and attach depth buffer (renderbuffer)
     GLuint rboDepth;
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, app->displaySize.x, app->displaySize.y);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "Framebuffer not complete!" << std::endl;
+    // Check if framebuffer is complete
+    CheckFramebufferStatus();
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -799,12 +813,21 @@ void Init(App* app)
     Program& texturedMeshProgram4 = app->programs[app->normal];
     LoadProgramAttributes(texturedMeshProgram4);
 
-    app->geoDeferred = LoadProgram(app, "LightDeferred.glsl", "SHOW_TEXTURED_MESH");
+    
+
+    app->geoDeferred = LoadProgram(app, "GeoDeferred.glsl", "SHOW_TEXTURED_MESH");
+    glUseProgram(app->programs[app->geoDeferred].handle);
     Program& texturedMeshProgram5 = app->programs[app->geoDeferred];
+    glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gAlbedoSpec"), 0);
     LoadProgramAttributes(texturedMeshProgram5);
 
+
     app->lightDeferred = LoadProgram(app, "LightDeferred.glsl", "SHOW_TEXTURED_MESH");
+    glUseProgram(app->programs[app->lightDeferred].handle);
     Program& texturedMeshProgram6 = app->programs[app->lightDeferred];
+    glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gNormal"), 1);
+    glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gAlbedoSpec"), 2);
     LoadProgramAttributes(texturedMeshProgram6);
     
     // Texture initialization
@@ -923,151 +946,55 @@ void Gui(App* app)
     ImGui::End();
 }
 
-void Update(App* app)
-{
+void Update(App* app) {
     // You can handle app->input keyboard/mouse here
     app->camera.UpdateCamera(app);
 
-    for (u64 i = 0; i < app->programs.size(); i++) {
-        Program& program = app->programs[i];
-        u64 currentTimestamp = GetFileLastWriteTimestamp(program.filepath.c_str());
-        if (currentTimestamp > program.lastWriteTimestamp) {
-            glDeleteProgram(program.handle);
-            String programSource = ReadTextFile(program.filepath.c_str());
-            const char* programName = program.programName.c_str();
-            program.handle = CreateProgramFromSource(programSource, programName);
-            program.lastWriteTimestamp = currentTimestamp;
-        }
+    MapBuffer(app->cbuffer, GL_READ_WRITE);
+
+    // Global Params
+    app->globalParamsOffset = app->cbuffer.head;
+
+    PushVec3(app->cbuffer, app->camera.Position);
+    PushUInt(app->cbuffer, app->lights.size());
+
+    for (u32 i = 0; i < app->lights.size(); ++i) {
+        AlignHead(app->cbuffer, sizeof(vec4)); // Align each struct to vec4 size for std140 layout compatibility
+
+        Light& light = app->lights[i];
+        PushUInt(app->cbuffer, light.type);
+        PushVec3(app->cbuffer, light.color); // vec3s are padded to vec4 in std140
+        PushVec3(app->cbuffer, light.direction);
+        PushVec3(app->cbuffer, light.position);
     }
 
-    switch (app->mode)
-    {
-    case Mode_ForwardRendering:
-    {
-        MapBuffer(app->cbuffer, GL_READ_WRITE);
+    app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
 
-        // Global Params
-        app->globalParamsOffset = app->cbuffer.head;
+    // Local Params
+    for (int i = 0; i < app->objects.size(); ++i) {
+        AlignHead(app->cbuffer, app->uniformBlockAlignment);
 
-        PushVec3(app->cbuffer, app->camera.Position);
+        Object& object = app->objects[i];
 
-        PushUInt(app->cbuffer, app->lights.size());
+        float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+        mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
+        mat4 viewMatrix = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
+        mat4 worldMatrix = object.worldMatrix;
+        mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * worldMatrix;
 
-        for (u32 i = 0; i < app->lights.size(); ++i) {
-            AlignHead(app->cbuffer, sizeof(vec4)); // Align each struct to vec4 size for std140 layout compatibility
+        // Debug: Print matrices
+        //std::cout << "Object " << i << " World Matrix:" << std::endl;
+        //logMat4(worldMatrix);
+        //std::cout << "Object " << i << " WorldViewProjection Matrix:" << std::endl;
+        //logMat4(worldViewProjectionMatrix);
 
-            Light& light = app->lights[i];
-            PushUInt(app->cbuffer, light.type);
-            PushVec3(app->cbuffer, light.color); // vec3s are padded to vec4 in std140
-            PushVec3(app->cbuffer, light.direction);
-            PushVec3(app->cbuffer, light.position);
-        }
-
-        app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
-
-        // Local Params
-        for (int i = 0; i < app->objects.size(); ++i) {
-            AlignHead(app->cbuffer, app->uniformBlockAlignment);
-
-            Object& object = app->objects[i];
-
-            float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
-            mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
-            mat4 viewMatrix = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
-            mat4 worldMatrix = object.worldMatrix;
-            mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * worldMatrix;
-
-            object.localParamsOffset = app->cbuffer.head;
-            PushMat4(app->cbuffer, worldMatrix);
-            PushMat4(app->cbuffer, worldViewProjectionMatrix);
-            object.localParamsSize = app->cbuffer.head - object.localParamsOffset;
-        }
-
-        UnmapBuffer(app->cbuffer);
-    }
-    break;
-    case Mode_DeferredRendering: // there is no buffer detected by renderdoc on deferred
-    {
-        MapBuffer(app->cbuffer, GL_READ_WRITE);
-
-        // Global Params
-        app->globalParamsOffset = app->cbuffer.head;
-
-        PushVec3(app->cbuffer, app->camera.Position);
-
-        PushUInt(app->cbuffer, app->lights.size());
-
-        for (u32 i = 0; i < app->lights.size(); ++i) {
-            AlignHead(app->cbuffer, sizeof(vec4)); // Align each struct to vec4 size for std140 layout compatibility
-
-            Light& light = app->lights[i];
-            PushUInt(app->cbuffer, light.type);
-            PushVec3(app->cbuffer, light.color); // vec3s are padded to vec4 in std140
-            PushVec3(app->cbuffer, light.direction);
-            PushVec3(app->cbuffer, light.position);
-        }
-
-        app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
-
-        // Local Params
-        for (int i = 0; i < app->objects.size(); ++i) {
-            AlignHead(app->cbuffer, app->uniformBlockAlignment);
-
-            Object& object = app->objects[i];
-
-            float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
-            mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
-            mat4 viewMatrix = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
-            mat4 worldMatrix = object.worldMatrix;
-            //mat4 worldViewProjectionMatrix = projectionMatrix * viewMatrix * worldMatrix;
-
-            object.localParamsOffset = app->cbuffer.head;
-            PushMat4(app->cbuffer, worldMatrix);
-            PushMat4(app->cbuffer, viewMatrix);
-            PushMat4(app->cbuffer, projectionMatrix);
-            object.localParamsSize = app->cbuffer.head - object.localParamsOffset;
-        }
-
-        UnmapBuffer(app->cbuffer);
-    }
-    break;
-    default:;
+        object.localParamsOffset = app->cbuffer.head;
+        PushMat4(app->cbuffer, worldMatrix);
+        PushMat4(app->cbuffer, worldViewProjectionMatrix);
+        object.localParamsSize = app->cbuffer.head - object.localParamsOffset;
     }
 
-
-    //for (int i = 0; i < app->objects.size(); i++)
-    //{
-    //    Object& Object = app->objects[i];
-    //
-    //    //update transform
-    //    float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
-    //    mat4 projectionMatrix = glm::perspective(glm::radians(app->camera.fov), aspectRatio, app->camera.zNear, app->camera.zFar);
-    //    mat4 view = glm::lookAt(app->camera.Position, app->camera.currentReference, vec3(0, 1, 0));
-    //
-    //    //update transform and view matrices
-    //    //sceneObject.worldMatrix = IdentityMatrix; --> only at the start;
-    //    Object.worldViewProjection = projectionMatrix * view * Object.worldMatrix;
-    //
-    //    //opengl stuff
-    //    glBindBuffer(GL_UNIFORM_BUFFER, app->meshes[app->models[Object.modelIndex].meshIdx].uniformBufferHandle);
-    //    u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-    //    u32 bufferHead = 0;
-    //
-    //    Object.localParamsOffset = bufferHead;
-    //
-    //    memcpy(bufferData + bufferHead, glm::value_ptr(Object.worldMatrix), sizeof(mat4));
-    //    bufferHead += sizeof(mat4);
-    //
-    //    memcpy(bufferData + bufferHead, glm::value_ptr(Object.worldViewProjection), sizeof(mat4));
-    //    bufferHead += sizeof(mat4);
-    //
-    //    Object.localParamsSize = bufferHead - Object.localParamsOffset;
-    //
-    //    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    //}
-
-    
-
+    UnmapBuffer(app->cbuffer);
 }
 
 void ForwardRender(App* app, u32 programIndex)
@@ -1085,8 +1012,7 @@ void ForwardRender(App* app, u32 programIndex)
     Program& texturedMeshProgram = app->programs[programIndex];
     glUseProgram(texturedMeshProgram.handle);
 
-    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
-    
+    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);    
 
     for (int j = 0; j < app->objects.size(); j++)
     {
@@ -1115,52 +1041,11 @@ void ForwardRender(App* app, u32 programIndex)
 
 // Deferred rendering related
 
-void GeometryPass(App* app) {
-
-    glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // - set the viewport
-    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-
-    // - set the blending state
-    glEnable(GL_BLEND);
-    glUseProgram(app->programs[app->geoDeferred].handle);
-
-    //glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
-    for (int j = 0; j < app->objects.size(); j++)
-    {
-        Model& model = app->models[app->objects[j].modelIndex];
-        Mesh& mesh = app->meshes[model.meshIdx];
-
-        for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-        {
-            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
-
-            GLuint vao = FindVAO(mesh, i, app->programs[app->geoDeferred]);
-            glBindVertexArray(vao);
-
-            u32 submeshMaterialIdx = model.materialIdx[i];
-            Material& submeshMaterial = app->materials[submeshMaterialIdx];
-
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-            glUniform1i(app->programUniformTexture, 0);
-
-            Submesh& submesh = mesh.submeshes[i];
-            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-        }
-    }
-
-    // Unbind the framebuffer to switch back to the default framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);    
-}
-
 
 void RenderQuad() {
     static GLuint quadVAO = 0;
     static GLuint quadVBO;
+
     if (quadVAO == 0) {
         GLfloat quadVertices[] = {
             // Positions        // Texture Coords
@@ -1169,28 +1054,59 @@ void RenderQuad() {
              1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
              1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
         };
+
         glGenVertexArrays(1, &quadVAO);
         glGenBuffers(1, &quadVBO);
         glBindVertexArray(quadVAO);
         glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
     }
+
     glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     glBindVertexArray(0);
 }
 
+void GeometryPass(App* app) {
+    glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(app->programs[app->geoDeferred].handle);
+
+    // Bind uniform buffers
+    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+
+    for (int j = 0; j < app->objects.size(); j++) {
+        Model& model = app->models[app->objects[j].modelIndex];
+        Mesh& mesh = app->meshes[model.meshIdx];
+
+        for (u32 i = 0; i < mesh.submeshes.size(); ++i) {
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+
+            GLuint vao = FindVAO(mesh, i, app->programs[app->geoDeferred]);
+            glBindVertexArray(vao);
+
+            u32 submeshMaterialIdx = model.materialIdx[i];
+            Material& submeshMaterial = app->materials[submeshMaterialIdx];            
+
+            Submesh& submesh = mesh.submeshes[i];
+            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+        }
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void LightingPass(App* app) {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Draw to the default framebuffer
-    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(app->programs[app->lightDeferred].handle);
 
-    // Bind the G-buffer textures
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, app->gPosition);
     glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gPosition"), 0);
@@ -1203,9 +1119,10 @@ void LightingPass(App* app) {
     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
     glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gAlbedoSpec"), 2);
 
-    // Set screen size for lighting calculations
-    glUniform2f(glGetUniformLocation(app->programs[app->lightDeferred].handle, "screenSize"), app->displaySize.x, app->displaySize.y);
+    glUniform3f(glGetUniformLocation(app->programs[app->lightDeferred].handle, "viewPos"), app->camera.Position.x, app->camera.Position.y, app->camera.Position.z);
 
+    // Draw the quad with debug color
+    RenderQuad();
 }
 
 
@@ -1284,9 +1201,7 @@ void LightingPass(App* app) {
 
 void DeferredRender(App* app) {
     GeometryPass(app);
-    //LightingPass(app);
-    // Render quad
-    RenderQuad();
+    LightingPass(app);
 }
 
 
