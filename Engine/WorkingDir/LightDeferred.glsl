@@ -3,95 +3,75 @@
 ///////////////////////////////////////////////////////////////////////
 #ifdef SHOW_LIGHTS
 
-#define MaxLightNumber 8
-
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
-struct Light {
-    unsigned int type;   // 0 for directional, 1 for point
-    vec3 color;
-    vec3 direction;      // For directional lights
-    vec3 position;       // For point lights
-};
-
 layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aNormal; // world space
-layout(location = 2) in vec2 aTexCoord;
+layout(location = 1) in vec2 aTexCoord;
 
-layout(binding = 0, std140) uniform globalParams {
-    vec3 uCameraPosition;
-    unsigned int uLightCount;
-    Light uLight[MaxLightNumber];
-};
-
-out vec3 vPosition;
-out vec3 vNormal;
-out vec3 vLightDir[MaxLightNumber];
-out vec3 vLightColor[MaxLightNumber];
 out vec2 TexCoord;
-flat out unsigned int vLightCount;
 
 void main()
 {
-    TexCoord = aTexCoord;
-    vPosition = vec3(uWorldMatrix * vec4(aPosition, 1.0));
-    vNormal = normalize(mat3(uWorldMatrix) * aNormal);
-    vLightCount = uLightCount;
+    TexCoord = aTexCoord; 
 
-    for(int i = 0; i < uLightCount; i++) {
-        if(uLight[i].type == 0) {  // Directional light
-            vLightDir[i] = normalize(uLight[i].direction);
-        } else if(uLight[i].type == 1) {  // Point light
-            vLightDir[i] = normalize(vec3(1.0f,1.0f,1.0f) - vPosition);
-        }
-        vLightColor[i] = uLight[i].color;
-    }
-
-    gl_Position = vec4(aPosition.x, aPosition.y, 0.0, 1.0);
+    gl_Position = vec4(aPosition, 1.0);
 }   
 
 #elif defined(FRAGMENT) ///////////////////////////////////////////////
 
-out vec4 oColor;
+in vec2 TexCoords;
 
-in vec3 vPosition;
-in vec3 vNormal;
-in vec3 vLightDir[MaxLightNumber];
-in vec3 vLightColor[MaxLightNumber];
-in vec2 TexCoord;
-flat in unsigned int vLightCount;
+out vec4 FragColor;
 
-uniform Light lights[16];  // Example: array of lights
-uniform int numLights;
+// G-buffer textures
+uniform sampler2D gPosition;
+uniform sampler2D gNormal;
+uniform sampler2D gAlbedoSpec;
+
+// Light properties
+struct Light {
+    vec3 Position;
+    vec3 Color;
+
+    // Attenuation
+    float Linear;
+    float Quadratic;
+};
+uniform Light light;
+
+// Camera position
 uniform vec3 viewPos;
+
+// Number of samples (optional)
+const int SAMPLE_COUNT = 16;
 
 void main()
 {
-    vec3 albedo = texture(TexCoord, TexCoord).rgb;
-    vec3 pos = texture(vPosition, TexCoord).xyz;
-    vec3 normal = normalize(texture(vNormal, TexCoord).xyz);
-    vec3 ambient = 0.1 * albedo;
+    // Retrieve data from G-buffer
+    vec3 FragPos = texture(gPosition, TexCoords).rgb;
+    vec3 Normal = texture(gNormal, TexCoords).rgb;
+    vec3 Albedo = texture(gAlbedoSpec, TexCoords).rgb;
+    float Specular = texture(gAlbedoSpec, TexCoords).a;
 
-    vec3 lighting = ambient;
-    vec4 texColor = texture(uTexture, vTexCoord);
+    // Calculate lighting
+    vec3 ambient = 0.1 * Albedo;
+    vec3 lightDir = normalize(light.Position - FragPos);
+    float diff = max(dot(Normal, lightDir), 0.0);
+    vec3 diffuse = diff * light.Color * Albedo;
 
-    for (int i = 0; i < vLightCount; i++) 
-    {
-        // Simple directional light calculation
-        vec3 lightDir = vLightDir[i];
-        vec3 lightColor = vLightColor[i];
+    // Specular shading
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 reflectDir = reflect(-lightDir, Normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    vec3 specular = light.Color * spec * Specular;
 
-        float diff = max(dot(normal, lightDir), 0.0);
-        vec3 diffuse = diff * lightColor * albedo * 1.0;
+    // Attenuation
+    float distance = length(light.Position - FragPos);
+    float attenuation = 1.0 / (1.0 + light.Linear * distance + light.Quadratic * (distance * distance));
 
-        vec3 reflectDir = reflect(-lightDir, normal);
-        float spec = pow(max(dot(vViewDir, reflectDir), 0.0), 300);
-        vec3 specular = spec * lightColor;
-
-        lighting += (diffuse + specular) * vec3(texColor);
-    }
-
-    oColor = vec4(lighting, 1.0);
+    // Combine results
+    vec3 lighting = (ambient + diffuse + specular) * attenuation;
+    FragColor = vec4(lighting, 1.0);
 }
 
 #endif
