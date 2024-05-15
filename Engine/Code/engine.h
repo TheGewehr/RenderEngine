@@ -288,6 +288,8 @@ struct App
     Buffer quadVBO;
     Buffer elementBuffer;
 
+    GLuint gDepth;
+
     // Other indices
     u32 programToRenderForward = 0;
 

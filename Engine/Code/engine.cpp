@@ -701,39 +701,78 @@ void SetupGBuffer(App* app) {
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
 
     // Position color buffer
-    glGenTextures(1, &app->gPosition);
-    glBindTexture(GL_TEXTURE_2D, app->gPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
+    //glGenTextures(1, &app->gPosition);
+    //glBindTexture(GL_TEXTURE_2D, app->gPosition);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
 
     // Normal color buffer
-    glGenTextures(1, &app->gNormal);
-    glBindTexture(GL_TEXTURE_2D, app->gNormal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
+    //glGenTextures(1, &app->gNormal);
+    //glBindTexture(GL_TEXTURE_2D, app->gNormal);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
 
     // Color + specular color buffer
+    //glGenTextures(1, &app->gAlbedoSpec);
+    //glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
+    //
+    //// Tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+    ////unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+    ////glDrawBuffers(3, attachments);
+    //
+    //unsigned int attachments[1] = { GL_COLOR_ATTACHMENT0 };
+    //glDrawBuffers(1, attachments);
+    //
+    //// Create and attach depth buffer (renderbuffer)   
+    //
+    //glGenTextures(1, &app->gDepth);
+    //glBindTexture(GL_TEXTURE_2D, app->gDepth);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glBindTexture(GL_TEXTURE_2D, 0);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gDepth, 0);
+
+    // framebuffers
+    app->gAlbedoSpec;
     glGenTextures(1, &app->gAlbedoSpec);
     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-    // Tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
-    unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-    glDrawBuffers(3, attachments);
+    app->gDepth;
+    glGenTextures(1, &app->gDepth);
+    glBindTexture(GL_TEXTURE_2D, app->gDepth);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-    // Create and attach depth buffer (renderbuffer)
-    GLuint rboDepth;
-    glGenRenderbuffers(1, &rboDepth);
-    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, app->displaySize.x, app->displaySize.y);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    //attach frame buffers 
+    app->gbuffer;
+    glGenFramebuffers(1, &app->gbuffer.handle);
+    glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, app->gDepth, 0);
 
     // Check if framebuffer is complete
     CheckFramebufferStatus();
@@ -1052,6 +1091,8 @@ void ForwardRender(App* app, u32 programIndex)
 void RenderQuad(App app) {
     glUseProgram(app.programs[app.renderLeQuad].handle);
 
+    glDisable(GL_DEPTH_TEST);
+
     std::string groupName = "Le quad";
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
 
@@ -1091,11 +1132,13 @@ void RenderQuad(App app) {
     }
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, app.textures[app.diceTexIdx].handle);
+    glBindTexture(GL_TEXTURE_2D, app.gbuffer.handle);
 
     glBindVertexArray(app.quadVAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // Use the correct count of indices
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); 
     glBindVertexArray(0);
+
+    glEnable(GL_DEPTH_TEST);
 
     glPopDebugGroup();
 }
@@ -1105,7 +1148,10 @@ void GeometryPass(App* app) {
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(app->programs[app->geoDeferred].handle);
+    GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
+
+    glUseProgram(app->programs[app->geoDeferred].handle);    
 
     // Bind uniform buffers
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->gbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
@@ -1231,13 +1277,13 @@ void LightingPass(App* app) {
 
 void DeferredRender(App* app) {
     GeometryPass(app);
-    LightingPass(app);
+    LightingPass(app);   
 }
 
 
 void Render(App* app)
 {
-    app->mode = Mode_DeferredRendering;
+    //app->mode = Mode_DeferredRendering;
     switch (app->mode)
     {
     //case Mode_TexturedQuad:
@@ -1267,7 +1313,7 @@ void Render(App* app)
     //}
     //break;
     case Mode_ForwardRendering:
-    {
+    {        
         ForwardRender(app, app->programToRenderForward);
     }
     break;
