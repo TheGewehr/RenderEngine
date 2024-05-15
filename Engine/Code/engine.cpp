@@ -813,12 +813,18 @@ void Init(App* app)
     Program& texturedMeshProgram4 = app->programs[app->normal];
     LoadProgramAttributes(texturedMeshProgram4);
 
+    app->renderLeQuad = LoadProgram(app, "RenderQuad.glsl", "RENDER_QUAD");
+    Program& texturedMeshProgram7 = app->programs[app->renderLeQuad];
+    LoadProgramAttributes(texturedMeshProgram7);
+
     
 
     app->geoDeferred = LoadProgram(app, "GeoDeferred.glsl", "SHOW_TEXTURED_MESH");
     glUseProgram(app->programs[app->geoDeferred].handle);
     Program& texturedMeshProgram5 = app->programs[app->geoDeferred];
-    glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gAlbedoSpec"), 0);
+    glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gPosition"), 0);
+    glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gNormal"), 1);
+    glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gAlbedoSpec"), 2);
     LoadProgramAttributes(texturedMeshProgram5);
 
 
@@ -833,6 +839,7 @@ void Init(App* app)
     // Texture initialization
     //app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
+    app->diceTexIdx = LoadTexture2D(app, "dice.png");
     //app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
@@ -1042,34 +1049,57 @@ void ForwardRender(App* app, u32 programIndex)
 // Deferred rendering related
 
 
-void RenderQuad() {
-    static GLuint quadVAO = 0;
-    static GLuint quadVBO;
+void RenderQuad(App app) {
+    glUseProgram(app.programs[app.renderLeQuad].handle);
 
-    if (quadVAO == 0) {
-        GLfloat quadVertices[] = {
-            // Positions        // Texture Coords
-            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-        };
+    std::string groupName = "Le quad";
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
 
-        glGenVertexArrays(1, &quadVAO);
-        glGenBuffers(1, &quadVBO);
-        glBindVertexArray(quadVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    GLfloat quadVertices[] = {
+        // Positions        // Texture Coords
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+         1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+    };
+
+    GLuint quadIndices[] = {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    if (app.quadVAO == 0) {
+        glGenVertexArrays(1, &app.quadVAO);
+        glGenBuffers(1, &app.quadVBO.handle);
+        glGenBuffers(1, &app.elementBuffer.handle);
+
+        glBindVertexArray(app.quadVAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, app.quadVBO.handle);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app.elementBuffer.handle);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
+
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+
+        glBindVertexArray(0); // Unbind VAO
     }
 
-    glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, app.textures[app.diceTexIdx].handle);
+
+    glBindVertexArray(app.quadVAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // Use the correct count of indices
     glBindVertexArray(0);
+
+    glPopDebugGroup();
 }
+
 
 void GeometryPass(App* app) {
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
@@ -1078,14 +1108,14 @@ void GeometryPass(App* app) {
     glUseProgram(app->programs[app->geoDeferred].handle);
 
     // Bind uniform buffers
-    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->gbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
     for (int j = 0; j < app->objects.size(); j++) {
         Model& model = app->models[app->objects[j].modelIndex];
         Mesh& mesh = app->meshes[model.meshIdx];
 
         for (u32 i = 0; i < mesh.submeshes.size(); ++i) {
-            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->gbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
 
             GLuint vao = FindVAO(mesh, i, app->programs[app->geoDeferred]);
             glBindVertexArray(vao);
@@ -1122,7 +1152,7 @@ void LightingPass(App* app) {
     glUniform3f(glGetUniformLocation(app->programs[app->lightDeferred].handle, "viewPos"), app->camera.Position.x, app->camera.Position.y, app->camera.Position.z);
 
     // Draw the quad with debug color
-    RenderQuad();
+    RenderQuad(*app);
 }
 
 
@@ -1207,7 +1237,7 @@ void DeferredRender(App* app) {
 
 void Render(App* app)
 {
-   
+    app->mode = Mode_DeferredRendering;
     switch (app->mode)
     {
     //case Mode_TexturedQuad:

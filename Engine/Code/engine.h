@@ -282,6 +282,11 @@ struct App
     u32 normal;
     u32 lightDeferred;// Create a deferred light program
     u32 geoDeferred; // Create a Deferred geo program
+    u32 renderLeQuad;
+
+    GLuint quadVAO = 0;
+    Buffer quadVBO;
+    Buffer elementBuffer;
 
     // Other indices
     u32 programToRenderForward = 0;
