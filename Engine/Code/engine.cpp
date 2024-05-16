@@ -774,27 +774,27 @@ void SetupGBuffer(App* app) {
     //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gDepth, 0);
 
     // framebuffers
-    app->gPosition;
-    glGenTextures(1, &app->gPosition);
-    glBindTexture(GL_TEXTURE_2D, app->gPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    app->gNormal;
-    glGenTextures(1, &app->gNormal);
-    glBindTexture(GL_TEXTURE_2D, app->gNormal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    //app->gPosition;
+    //glGenTextures(1, &app->gPosition);
+    //glBindTexture(GL_TEXTURE_2D, app->gPosition);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glBindTexture(GL_TEXTURE_2D, 0);
+    //
+    //app->gNormal;
+    //glGenTextures(1, &app->gNormal);
+    //glBindTexture(GL_TEXTURE_2D, app->gNormal);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glBindTexture(GL_TEXTURE_2D, 0);
 
     app->gAlbedoSpec;
     glGenTextures(1, &app->gAlbedoSpec);
@@ -822,16 +822,16 @@ void SetupGBuffer(App* app) {
     app->gbuffer;
     glGenFramebuffers(1, &app->gbuffer.handle);
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, app->gDepth, 0);
 
     // Check if framebuffer is complete
     CheckFramebufferStatus();
 
-    GLenum uiDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_DEPTH_ATTACHMENT };
-    glDrawBuffers(4, uiDrawBuffers);
+    //GLenum uiDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_DEPTH_ATTACHMENT };
+    //glDrawBuffers(4, uiDrawBuffers);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1415,127 +1415,79 @@ void Camera::CalculateViewMatrix()
 
 void Camera::UpdateCamera(App* app)
 {
-
     vec3 newPos(0, 0, 0);
-    float spd = 1.f;
-    float normalSpd = speed * app->deltaTime * 1000.f;
-    float xtraSpd = normalSpd * 1.75f;
+    float spd = app->input.keys[Key::K_SPACE] ? speed * app->deltaTime * 1750.f : speed * app->deltaTime * 1000.f;
 
-    // keyboard movement
-
-    if (app->input.keys[Key::K_SPACE])
-    {
-        spd = xtraSpd;
-    }
-    else
-    {
-        spd = normalSpd;
-    }
-
-    if (app->input.keys[Key::K_Q])
-    {
-        newPos.y -= spd;
-    }
-
-    if (app->input.keys[Key::K_E])
-    {
-        newPos.y += spd;
-    }
-
-    if (app->input.keys[Key::K_W])
-    {
-        newPos -= Z * spd;
-    }
-
-    if (app->input.keys[Key::K_S])
-    {
-        newPos += Z * spd;
-    }
-
-    if (app->input.keys[Key::K_A])
-    {
-        newPos -= X * spd;
-    }
-
-    if (app->input.keys[Key::K_D])
-    {
-        newPos += X * spd;
-    }
-
-    
+    if (app->input.keys[Key::K_Q]) newPos.y -= spd;
+    if (app->input.keys[Key::K_E]) newPos.y += spd;
+    if (app->input.keys[Key::K_W]) newPos -= Z * spd;
+    if (app->input.keys[Key::K_S]) newPos += Z * spd;
+    if (app->input.keys[Key::K_A]) newPos -= X * spd;
+    if (app->input.keys[Key::K_D]) newPos += X * spd;
 
     Position += newPos;
     currentReference += newPos;
 
-    //mouse movement
-
-    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && app->input.mouseButtons[MouseButton::RIGHT])
+    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
     {
         float dx = app->input.mouseDelta.x;
         float dy = app->input.mouseDelta.y;
 
-        Position -= currentReference;
-
-        if (dx != 0)
+        if (app->input.mouseButtons[MouseButton::RIGHT])
         {
-            float DeltaX = (float)dx * sensitivity;
+            Position -= currentReference;
 
-            X = rotate(X, DeltaX, vec3(0.0f, 1.0f, 0.0f));
-            Y = rotate(Y, DeltaX, vec3(0.0f, 1.0f, 0.0f));
-            Z = rotate(Z, DeltaX, vec3(0.0f, 1.0f, 0.0f));
-        }
-
-        if (dy != 0)
-        {
-            float DeltaY = (float)dy * sensitivity;
-
-            Y = rotate(Y, DeltaY, X);
-            Z = rotate(Z, DeltaY, X);
-
-            if (Y.y < 0.0f)
+            if (dx != 0)
             {
-                Z = vec3(0.0f, Z.y > 0.0f ? 1.0f : -1.0f, 0.0f);
-                Y = cross(Z, X);
+                float DeltaX = dx * sensitivity;
+                X = rotate(X, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+                Y = rotate(Y, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+                Z = rotate(Z, DeltaX, vec3(0.0f, 1.0f, 0.0f));
             }
 
-        }
-        Position = currentReference + Z * length(Position);
+            if (dy != 0)
+            {
+                float DeltaY = dy * sensitivity;
+                Y = rotate(Y, DeltaY, X);
+                Z = rotate(Z, DeltaY, X);
 
+                if (Y.y < 0.0f)
+                {
+                    Z = vec3(0.0f, Z.y > 0.0f ? 1.0f : -1.0f, 0.0f);
+                    Y = cross(Z, X);
+                }
+            }
+            Position = currentReference + Z * length(Position);
+        }
+        else if (app->input.mouseButtons[MouseButton::LEFT])
+        {
+            if (dx != 0)
+            {
+                float DeltaX = dx * sensitivity * 0.5f;
+                X = rotate(X, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+                Y = rotate(Y, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+                Z = rotate(Z, DeltaX, vec3(0.0f, 1.0f, 0.0f));
+            }
+
+            if (dy != 0)
+            {
+                float DeltaY = dy * sensitivity * 0.5f;
+                Y = rotate(Y, DeltaY, X);
+                Z = rotate(Z, DeltaY, X);
+
+                if (Y.y < 0.0f)
+                {
+                    Z = vec3(0.0f, Z.y > 0.0f ? 1.0f : -1.0f, 0.0f);
+                    Y = cross(Z, X);
+                }
+            }
+            currentReference = Position - Z * length(Position);
+        }
     }
-
-
-    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && app->input.mouseButtons[MouseButton::LEFT])
-    {
-        float dx = app->input.mouseDelta.x;
-        float dy = app->input.mouseDelta.y;
-
-        if (dx != 0)
-        {
-            float DeltaX = (float)dx * sensitivity * 0.5f;
-
-            X = rotate(X, DeltaX, vec3(0.0f, 1.0f, 0.0f));
-            Y = rotate(Y, DeltaX, vec3(0.0f, 1.0f, 0.0f));
-            Z = rotate(Z, DeltaX, vec3(0.0f, 1.0f, 0.0f));
-        }
-
-        if (dy != 0)
-        {
-            float DeltaY = (float)dy * sensitivity * 0.5f;
-
-            Y = rotate(Y, DeltaY, X);
-            Z = rotate(Z, DeltaY, X);
-
-            if (Y.y < 0.0f)
-            {
-                Z = vec3(0.0f, Z.y > 0.0f ? 1.0f : -1.0f, 0.0f);
-                Y = cross(Z, X);
-            }
-        }
-        currentReference = Position - Z * length(Position);
-    }    
 
     CalculateViewMatrix();
 }
+
 
 bool IsPowerOf2(u32 value)
 {
