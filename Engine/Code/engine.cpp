@@ -689,12 +689,41 @@ u32 LoadModel(App* app, const char* filename)
 void CheckFramebufferStatus() {
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "Framebuffer not complete: " << status << std::endl;
+        switch (status) {
+        case GL_FRAMEBUFFER_UNDEFINED:
+            std::cerr << "Framebuffer error: GL_FRAMEBUFFER_UNDEFINED" << std::endl;
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+            std::cerr << "Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT" << std::endl;
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+            std::cerr << "Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT" << std::endl;
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+            std::cerr << "Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER" << std::endl;
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+            std::cerr << "Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER" << std::endl;
+            break;
+        case GL_FRAMEBUFFER_UNSUPPORTED:
+            std::cerr << "Framebuffer error: GL_FRAMEBUFFER_UNSUPPORTED" << std::endl;
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+            std::cerr << "Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE" << std::endl;
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+            std::cerr << "Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS" << std::endl;
+            break;
+        default:
+            std::cerr << "Framebuffer error: Unknown status (" << status << ")" << std::endl;
+            break;
+        }
     }
     else {
         std::cout << "Framebuffer is complete" << std::endl;
     }
 }
+
 
 void SetupGBuffer(App* app) {
     glGenFramebuffers(1, &app->gbuffer.handle);
@@ -745,6 +774,28 @@ void SetupGBuffer(App* app) {
     //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gDepth, 0);
 
     // framebuffers
+    app->gPosition;
+    glGenTextures(1, &app->gPosition);
+    glBindTexture(GL_TEXTURE_2D, app->gPosition);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    app->gNormal;
+    glGenTextures(1, &app->gNormal);
+    glBindTexture(GL_TEXTURE_2D, app->gNormal);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     app->gAlbedoSpec;
     glGenTextures(1, &app->gAlbedoSpec);
     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
@@ -771,11 +822,16 @@ void SetupGBuffer(App* app) {
     app->gbuffer;
     glGenFramebuffers(1, &app->gbuffer.handle);
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, app->gDepth, 0);
 
     // Check if framebuffer is complete
     CheckFramebufferStatus();
+
+    GLenum uiDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_DEPTH_ATTACHMENT };
+    glDrawBuffers(4, uiDrawBuffers);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1092,6 +1148,7 @@ void RenderQuad(App app) {
     glUseProgram(app.programs[app.renderLeQuad].handle);
 
     glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
 
     std::string groupName = "Le quad";
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
