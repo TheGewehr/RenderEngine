@@ -269,8 +269,8 @@ GLuint CreateTexture2DFromImage(Image image)
     glGenTextures(1, &texHandle);
     glBindTexture(GL_TEXTURE_2D, texHandle);
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image.size.x, image.size.y, 0, dataFormat, dataType, image.pixels);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -776,28 +776,28 @@ void SetupGBuffer(App* app) {
 
     // framebuffers
     //app->gPosition;
-    //glGenTextures(1, &app->gPosition);
-    //glBindTexture(GL_TEXTURE_2D, app->gPosition);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    //glBindTexture(GL_TEXTURE_2D, 0);
-    //
+    glGenTextures(1, &app->gPosition);
+    glBindTexture(GL_TEXTURE_2D, app->gPosition);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
     //app->gNormal;
-    //glGenTextures(1, &app->gNormal);
-    //glBindTexture(GL_TEXTURE_2D, app->gNormal);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    //glBindTexture(GL_TEXTURE_2D, 0);
+    glGenTextures(1, &app->gNormal);
+    glBindTexture(GL_TEXTURE_2D, app->gNormal);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-    app->gAlbedoSpec;
+    //app->gAlbedoSpec;
     glGenTextures(1, &app->gAlbedoSpec);
     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -823,9 +823,9 @@ void SetupGBuffer(App* app) {
     app->gbuffer;
     glGenFramebuffers(1, &app->gbuffer.handle);
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
-    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
-    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->gPosition, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, app->gNormal, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, app->gAlbedoSpec, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, app->gDepth, 0);
 
     // Check if framebuffer is complete
@@ -848,7 +848,10 @@ void Init(App* app)
     // - textures
 
     //app->mode = Mode_TexturedQuad;
-    app->mode = Mode_ForwardRendering;
+    app->mode = Mode_DeferredRendering;
+
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(OnGlError, app);
 
     // Camera
     
@@ -915,21 +918,21 @@ void Init(App* app)
 
     
 
-    app->geoDeferred = LoadProgram(app, "GeoDeferred.glsl", "SHOW_TEXTURED_MESH");
-    glUseProgram(app->programs[app->geoDeferred].handle);
+    app->geoDeferred = LoadProgram(app, "GeoDeferred.glsl", "SHOW_GEO");
+    //glUseProgram(app->programs[app->geoDeferred].handle);
     Program& texturedMeshProgram5 = app->programs[app->geoDeferred];
-    glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gPosition"), 0);
-    glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gAlbedoSpec"), 2);
+    //glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gPosition"), 0);
+    //glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gNormal"), 1);
+    //glUniform1i(glGetUniformLocation(texturedMeshProgram5.handle, "gAlbedoSpec"), 2);
     LoadProgramAttributes(texturedMeshProgram5);
 
 
-    app->lightDeferred = LoadProgram(app, "LightDeferred.glsl", "SHOW_TEXTURED_MESH");
-    glUseProgram(app->programs[app->lightDeferred].handle);
+    app->lightDeferred = LoadProgram(app, "LightDeferred.glsl", "SHOW_LIGHT");
+    //glUseProgram(app->programs[app->lightDeferred].handle);
     Program& texturedMeshProgram6 = app->programs[app->lightDeferred];
-    glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gPosition"), 0);
-    glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gNormal"), 1);
-    glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gAlbedoSpec"), 2);
+    //glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gPosition"), 0);
+    //glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gNormal"), 1);
+    //glUniform1i(glGetUniformLocation(texturedMeshProgram6.handle, "gAlbedoSpec"), 2);
     LoadProgramAttributes(texturedMeshProgram6);
     
     // Texture initialization
@@ -973,6 +976,14 @@ void Init(App* app)
     sobject.modelIndex = LoadModel(app, "Models/Sphere/sphere.obj");
     app->objects.push_back(sobject);
 
+    Object sobject1;
+    sobject1.worldMatrix = identityMatrix;
+    sobject1.SetTransform(vec3(-5.f, 0.f, 0.f));
+    //sobject.SetScale(vec3(1.4f, 5.f,0.3f));
+    //sobject1.SetRotation(vec3(8.f, 45.f, 3.f));
+    sobject1.modelIndex = LoadModel(app, "Models/Pigeon/D0901B73.obj");
+    app->objects.push_back(sobject1);
+
     //Lights
     Light directionalLight;
     directionalLight.color = vec3(1.f,0.f,0.f);
@@ -987,8 +998,21 @@ void Init(App* app)
     pointLight.type = LightType::LightType_Point;
     app->lights.push_back(pointLight);
 
-    glEnable(GL_DEPTH_TEST);
-    glDebugMessageCallback(OnGlError, app);
+    for (int i = 0; i < app->lights.size(); i++)
+    {
+        if (app->lights[i].type == LightType::LightType_Point)
+        {
+            Object lightPrimitive;
+            lightPrimitive.worldMatrix = identityMatrix;
+            lightPrimitive.SetTransform(app->lights[i].position);
+            sobject.SetScale(vec3(0.1f, 0.1f, 0.1f));
+            //lightPrimitive.SetRotation(vec3(8.f, 45.f, 3.f));
+            lightPrimitive.modelIndex = LoadModel(app, "Models/Sphere/sphere.obj");
+            app->objects.push_back(lightPrimitive);
+        }        
+    }
+
+    glEnable(GL_DEPTH_TEST);   
 }
 
 void Gui(App* app)
@@ -1102,6 +1126,10 @@ void Update(App* app) {
 
 void ForwardRender(App* app, u32 programIndex)
 {
+
+    std::string groupName = "Forward";
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
+
     // - clear the framebuffer
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1122,6 +1150,9 @@ void ForwardRender(App* app, u32 programIndex)
         Model& model = app->models[app->objects[j].modelIndex];
         Mesh& mesh = app->meshes[model.meshIdx];
 
+        std::string groupName = "model_" + std::to_string(j);
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
+
         for (u32 i = 0; i < mesh.submeshes.size(); ++i)
         {
             glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
@@ -1139,7 +1170,10 @@ void ForwardRender(App* app, u32 programIndex)
             Submesh& submesh = mesh.submeshes[i];
             glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
         }
+        glPopDebugGroup();
     }
+
+    glPopDebugGroup();
 }
 
 // Deferred rendering related
@@ -1151,7 +1185,7 @@ void RenderQuad(App app) {
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
 
-    std::string groupName = "Le quad";
+    std::string groupName = "Quad Rendering";
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
 
     GLfloat quadVertices[] = {
@@ -1206,6 +1240,10 @@ void RenderQuad(App app) {
 
 
 void GeometryPass(App* app) {
+
+    std::string groupName = "Deferred Geometry Pass";
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
+
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1220,6 +1258,9 @@ void GeometryPass(App* app) {
     for (int j = 0; j < app->objects.size(); j++) {
         Model& model = app->models[app->objects[j].modelIndex];
         Mesh& mesh = app->meshes[model.meshIdx];
+
+        std::string groupName = "model_" + std::to_string(j);
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
 
         for (u32 i = 0; i < mesh.submeshes.size(); ++i) {
             glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->gbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
@@ -1238,12 +1279,19 @@ void GeometryPass(App* app) {
             glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
 
         }
+        glPopDebugGroup();
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glPopDebugGroup();
 }
 
 void LightingPass(App* app) {
+
+    std::string groupName = "Deferred Lighting Pass";
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1264,6 +1312,7 @@ void LightingPass(App* app) {
     glUniform3f(glGetUniformLocation(app->programs[app->lightDeferred].handle, "viewPos"), app->camera.Position.x, app->camera.Position.y, app->camera.Position.z);
 
     // Draw the quad with debug color
+    glPopDebugGroup();
     
 }
 

@@ -5,38 +5,51 @@
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
+struct Light {
+    unsigned int type;   // 0 for directional, 1 for point
+    vec3 color;
+    vec3 direction;      // For directional lights
+    vec3 position;       // For point lights
+};
+
 layout(location = 0) in vec3 aPosition; // world space
 layout(location = 1) in vec3 aNormal; 
 layout(location = 2) in vec2 aTexCoord;
 
-uniform mat4 uWorldMatrix;
-uniform mat4 uViewMatrix;
-uniform mat4 uProjectionMatrix;
-//uniform mat3 u_NormalMatrix;
+layout(binding = 0, std140) uniform globalParams {
+    vec3 uCameraPosition;
+    unsigned int uLightCount;
+    Light uLight[8];
+};
 
-out vec3 FragPos;
-out vec3 Normal;
-out vec2 TexCoord;
+layout(binding = 1, std140) uniform localParams {
+    mat4 uWorldMatrix;
+    mat4 uWorldViewProjectionMatrix;
+};
+
+layout(location = 0) out vec3 FragPos;
+layout(location = 1) out vec3 Normal;
+layout(location = 2) out vec2 TexCoord;
 
 void main()
 {
     FragPos = vec3(uWorldMatrix * vec4(aPosition, 1.0));
     Normal = mat3(transpose(inverse(uWorldMatrix))) * aNormal;
     TexCoord = aTexCoord;
-    gl_Position = uProjectionMatrix * uViewMatrix * vec4(FragPos, 1.0);
+    gl_Position = uWorldViewProjectionMatrix * vec4(FragPos, 1.0);
 }
 
 #elif defined(FRAGMENT) ///////////////////////////////////////////////
 
 //out vec4 oColor;
 
-//layout (location = 0) out vec4 gPosition;
-//layout (location = 1) out vec4 gNormal;
-layout (location = 0) out vec4 gAlbedoSpec;
+layout (location = 0) out vec4 gPosition;
+layout (location = 1) out vec4 gNormal;
+layout (location = 2) out vec4 gAlbedoSpec;
 
-in vec3 FragPos;
-in vec3 Normal;
-in vec2 TexCoord;
+layout (location = 0) in vec3 FragPos;
+layout (location = 1) in vec3 Normal;
+layout (location = 2) in vec2 TexCoord;
 
 uniform sampler2D textureOutput;
 //uniform sampler2D texture_specular1;
@@ -44,13 +57,13 @@ uniform sampler2D textureOutput;
 void main()
 {
     // store the fragment position vector in the first gbuffer texture
-    //gPosition = vec4(FragPos,1.0);
+    gPosition = vec4(FragPos,1.0);
     // also store the per-fragment normals into the gbuffer
-    //gNormal = vec4(normalize(Normal),1.0);
+    gNormal = vec4(normalize(Normal),1.0);
     // and the diffuse per-fragment color
-    //gAlbedoSpec.rgb = texture(textureOutput, TexCoords).rgb;
+    gAlbedoSpec.rgb = texture(textureOutput, TexCoord).rgb;
     // store specular intensity in gAlbedoSpec's alpha component
-    //gAlbedoSpec.a = 0.5;
+    gAlbedoSpec.a = 0.5;
 
     gAlbedoSpec = texture(textureOutput, TexCoord);
     
