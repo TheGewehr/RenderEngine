@@ -968,13 +968,13 @@ void Init(App* app)
     object2.SetRotation(vec3(0.f, 160.f, 0.f)); app->objects.push_back(object2);
     app->objects.push_back(object2);
 
-    Object sobject;    
-    sobject.worldMatrix = identityMatrix;
-    sobject.SetTransform(vec3(-1.f, -2.f, 0.f));
-    //sobject.SetScale(vec3(1.4f, 5.f,0.3f));
-    sobject.SetRotation(vec3(8.f,45.f,3.f));
-    sobject.modelIndex = LoadModel(app, "Models/Sphere/sphere.obj");
-    app->objects.push_back(sobject);
+   // Object sobject;    
+   // sobject.worldMatrix = identityMatrix;
+   // sobject.SetTransform(vec3(-1.f, -2.f, 0.f));
+   // //sobject.SetScale(vec3(1.4f, 5.f,0.3f));
+   // sobject.SetRotation(vec3(8.f,45.f,3.f));
+   // sobject.modelIndex = LoadModel(app, "Models/Sphere/sphere.obj");
+   // app->objects.push_back(sobject);
 
     Object sobject1;
     sobject1.worldMatrix = identityMatrix;
@@ -1002,13 +1002,13 @@ void Init(App* app)
     {
         if (app->lights[i].type == LightType::LightType_Point)
         {
-            Object lightPrimitive;
-            lightPrimitive.worldMatrix = identityMatrix;
-            lightPrimitive.SetTransform(app->lights[i].position);
-            sobject.SetScale(vec3(0.1f, 0.1f, 0.1f));
-            //lightPrimitive.SetRotation(vec3(8.f, 45.f, 3.f));
-            lightPrimitive.modelIndex = LoadModel(app, "Models/Sphere/sphere.obj");
-            app->objects.push_back(lightPrimitive);
+           Object lightPrimitive;
+           lightPrimitive.worldMatrix = identityMatrix;
+           lightPrimitive.SetTransform(app->lights[i].position);
+           lightPrimitive.SetScale(vec3(0.1f, 0.1f, 0.1f));
+           //lightPrimitive.SetRotation(vec3(8.f, 45.f, 3.f));
+           lightPrimitive.modelIndex = LoadModel(app, "Models/Sphere/sphere.obj");
+           app->objects.push_back(lightPrimitive);
         }        
     }
 
