@@ -778,7 +778,7 @@ void SetupGBuffer(App* app) {
     //app->gPosition;
     glGenTextures(1, &app->gPosition);
     glBindTexture(GL_TEXTURE_2D, app->gPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, app->displaySize.x, app->displaySize.y, 0, GL_RGB, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -789,7 +789,7 @@ void SetupGBuffer(App* app) {
     //app->gNormal;
     glGenTextures(1, &app->gNormal);
     glBindTexture(GL_TEXTURE_2D, app->gNormal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, app->displaySize.x, app->displaySize.y, 0, GL_RGB, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -1070,6 +1070,12 @@ void Gui(App* app)
         app->mode = Mode::Mode_DeferredRendering;
     }
 
+
+    ImGui::Image((void*)app->gAlbedoSpec, ImVec2(150, 100), ImVec2(0, 1), ImVec2(1, 0));
+    ImGui::Image((void*)app->gPosition, ImVec2(150, 100), ImVec2(0, 1), ImVec2(1, 0));
+    ImGui::Image((void*)app->gNormal, ImVec2(150, 100), ImVec2(0, 1), ImVec2(1, 0));
+    ImGui::Image((void*)app->gDepth, ImVec2(150, 100), ImVec2(0, 1), ImVec2(1, 0));
+
     ImGui::End();
 }
 
@@ -1180,10 +1186,9 @@ void ForwardRender(App* app, u32 programIndex)
 
 
 void RenderQuad(App app) {
-    glUseProgram(app.programs[app.renderLeQuad].handle);
+    
 
     glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
 
     std::string groupName = "Quad Rendering";
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
@@ -1245,31 +1250,40 @@ void GeometryPass(App* app) {
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
 
     glBindFramebuffer(GL_FRAMEBUFFER, app->gbuffer.handle);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
+    GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
-    glUseProgram(app->programs[app->geoDeferred].handle);    
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Bind uniform buffers
-    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->gbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+    // - set the viewport
+    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-    for (int j = 0; j < app->objects.size(); j++) {
+    // - set the blending state
+    glEnable(GL_BLEND);
+
+    Program& texturedMeshProgram = app->programs[app->geoDeferred];
+    glUseProgram(texturedMeshProgram.handle);
+
+    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+
+    for (int j = 0; j < app->objects.size(); j++)
+    {
         Model& model = app->models[app->objects[j].modelIndex];
         Mesh& mesh = app->meshes[model.meshIdx];
 
         std::string groupName = "model_" + std::to_string(j);
         glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
 
-        for (u32 i = 0; i < mesh.submeshes.size(); ++i) {
-            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->gbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
+        for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+        {
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, app->objects[j].localParamsOffset, app->objects[j].localParamsSize);
 
-            GLuint vao = FindVAO(mesh, i, app->programs[app->geoDeferred]);
+            GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
             glBindVertexArray(vao);
 
             u32 submeshMaterialIdx = model.materialIdx[i];
-            Material& submeshMaterial = app->materials[submeshMaterialIdx];      
+            Material& submeshMaterial = app->materials[submeshMaterialIdx];
 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
@@ -1277,14 +1291,12 @@ void GeometryPass(App* app) {
 
             Submesh& submesh = mesh.submeshes[i];
             glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-
         }
         glPopDebugGroup();
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    glPopDebugGroup();
 }
 
 void LightingPass(App* app) {
@@ -1292,22 +1304,24 @@ void LightingPass(App* app) {
     std::string groupName = "Deferred Lighting Pass";
     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, groupName.c_str());
 
+    glUseProgram(app->programs[app->renderLeQuad].handle);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(app->programs[app->lightDeferred].handle);
 
+    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gPosition"), 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, app->gPosition);
-    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gPosition"), 0);
     
+    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gNormal"), 1);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, app->gNormal);
-    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gNormal"), 1);
     
+    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gAlbedoSpec"), 2);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
-    glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gAlbedoSpec"), 2);
 
     glUniform3f(glGetUniformLocation(app->programs[app->lightDeferred].handle, "viewPos"), app->camera.Position.x, app->camera.Position.y, app->camera.Position.z);
 
