@@ -347,6 +347,7 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
                 break;
             }
         }        
+        assert(attributeWasLinked); 
     }
 
     glBindVertexArray(0);
@@ -1188,8 +1189,11 @@ void RenderQuad(App app) {
         glBindVertexArray(0); // Unbind VAO
     }
 
+    int location = glGetUniformLocation(app.programs[app.renderLeQuad].handle, "screenTexture");
+    glUniform1i(location, 0);
+
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, app.gbuffer.handle);
+    glBindTexture(GL_TEXTURE_2D, app.gAlbedoSpec);
 
     glBindVertexArray(app.quadVAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); 
@@ -1224,10 +1228,15 @@ void GeometryPass(App* app) {
             glBindVertexArray(vao);
 
             u32 submeshMaterialIdx = model.materialIdx[i];
-            Material& submeshMaterial = app->materials[submeshMaterialIdx];            
+            Material& submeshMaterial = app->materials[submeshMaterialIdx];      
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+            glUniform1i(app->programUniformTexture, 0);
 
             Submesh& submesh = mesh.submeshes[i];
             glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+
         }
     }
 
@@ -1243,11 +1252,11 @@ void LightingPass(App* app) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, app->gPosition);
     glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gPosition"), 0);
-
+    
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, app->gNormal);
     glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gNormal"), 1);
-
+    
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
     glUniform1i(glGetUniformLocation(app->programs[app->lightDeferred].handle, "gAlbedoSpec"), 2);
@@ -1255,7 +1264,7 @@ void LightingPass(App* app) {
     glUniform3f(glGetUniformLocation(app->programs[app->lightDeferred].handle, "viewPos"), app->camera.Position.x, app->camera.Position.y, app->camera.Position.z);
 
     // Draw the quad with debug color
-    RenderQuad(*app);
+    
 }
 
 
@@ -1334,7 +1343,8 @@ void LightingPass(App* app) {
 
 void DeferredRender(App* app) {
     GeometryPass(app);
-    LightingPass(app);   
+    //LightingPass(app); 
+    RenderQuad(*app);  
 }
 
 
